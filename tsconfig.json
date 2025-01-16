@@ -18,20 +18,17 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@libs/*": [
-        "libs/*"
-      ],
       "@app/database": [
         "libs/database/src"
       ],
       "@app/database/*": [
         "libs/database/src/*"
       ],
-      "@app/utils": [
-        "libs/utils/src"
+      "@app/files": [
+        "libs/files/src"
       ],
-      "@app/utils/*": [
-        "libs/utils/src/*"
+      "@app/files/*": [
+        "libs/files/src/*"
       ],
       "@app/auth": [
         "libs/auth/src"

@@ -9,10 +9,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
-import { AuthService } from '@app/auth';
-import { RegisterDto } from '@app/auth/dto/register.dto';
-import { GoogleGuard } from '@app/auth/guards/google.guard';
-import { CurrentUser } from '@app/utils';
+import { AuthService, CurrentUser, RegisterDto, GoogleGuard } from '@app/auth';
 import { CreateUserDto } from '@app/users/dto/create-user.dto';
 
 @Controller('auth')

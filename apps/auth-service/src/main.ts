@@ -10,6 +10,8 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  await app.listen(3000);
+  await app.listen(3000).then(() =>
+    console.log(`Auth service start on ${process.env.port ?? 3000} port`),
+  );;
 }
 bootstrap();

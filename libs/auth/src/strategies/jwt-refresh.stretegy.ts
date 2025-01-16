@@ -1,6 +1,6 @@
 import { Request } from 'express';
 import { Strategy } from 'passport-jwt';
-import { JwtPayload } from '@app/utils';
+import { JwtPayload } from '@app/auth';
 import { UsersService } from '@app/users/users.service';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';

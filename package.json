@@ -37,7 +37,8 @@
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "reflect-metadata": "^0.2.0",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
@@ -46,6 +47,7 @@
     "@types/cookie-parser": "^1.4.8",
     "@types/express": "^4.17.17",
     "@types/jest": "^29.5.2",
+    "@types/multer": "^1.4.12",
     "@types/node": "^20.3.1",
     "@types/passport-local": "^1.0.38",
     "@types/supertest": "^6.0.0",
@@ -89,7 +91,8 @@
       "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
       "^@app/auth(|/.*)$": "<rootDir>/libs/auth/src/$1",
       "^@app/utils(|/.*)$": "<rootDir>/libs/utils/src/$1",
-      "^@app/users(|/.*)$": "<rootDir>/libs/users/src/$1"
+      "^@app/users(|/.*)$": "<rootDir>/libs/users/src/$1",
+      "^@app/files(|/.*)$": "<rootDir>/libs/files/src/$1"
     }
   }
 }

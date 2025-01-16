@@ -37,15 +37,6 @@
         "tsConfigPath": "apps/chat-service/tsconfig.app.json"
       }
     },
-    "files-service": {
-      "type": "application",
-      "root": "apps/files-service",
-      "entryFile": "main",
-      "sourceRoot": "apps/files-service/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/files-service/tsconfig.app.json"
-      }
-    },
     "database": {
       "type": "library",
       "root": "libs/database",
@@ -53,15 +44,6 @@
       "sourceRoot": "libs/database/src",
       "compilerOptions": {
         "tsConfigPath": "libs/database/tsconfig.lib.json"
-      }
-    },
-    "utils": {
-      "type": "library",
-      "root": "libs/utils",
-      "entryFile": "index",
-      "sourceRoot": "libs/utils/src",
-      "compilerOptions": {
-        "tsConfigPath": "libs/utils/tsconfig.lib.json"
       }
     },
     "auth": {
@@ -80,6 +62,15 @@
       "sourceRoot": "libs/users/src",
       "compilerOptions": {
         "tsConfigPath": "libs/users/tsconfig.lib.json"
+      }
+    },
+    "files": {
+      "type": "library",
+      "root": "libs/files",
+      "entryFile": "index",
+      "sourceRoot": "libs/files/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/files/tsconfig.lib.json"
       }
     }
   }
