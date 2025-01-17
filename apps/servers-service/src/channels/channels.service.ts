@@ -3,19 +3,23 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { MemberRole } from '@prisma/client';
-import { PrismaService } from '@app/database';
-import { CreateChannelDto } from './dto/create-channel.dto';
-import { UpdateChannelDto } from './dto/update-channel.dto';
+import { MemberRole } from '@prisma/db-server';
+import { PrismaService } from '../../prisma/prisma.service';
+import {
+  CreateChannelPayload,
+  DeleteChannelPayload,
+  UpdateChannelPayload,
+} from '@app/database';
 
 @Injectable()
 export class ChannelsService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async create(req: Request, userId: string, { name, type }: CreateChannelDto) {
-    const { searchParams } = new URL(req.url);
-    const serverId = searchParams.get('serverId');
-
+  async create({
+    userId,
+    serverId,
+    createChannelDto: { name, type },
+  }: CreateChannelPayload) {
     if (!userId) {
       throw new UnauthorizedException();
     }
@@ -48,15 +52,12 @@ export class ChannelsService {
     });
   }
 
-  async update(
-    req: Request,
-    channelId: string,
-    userId: string,
-    { name, type }: UpdateChannelDto,
-  ) {
-    const { searchParams } = new URL(req.url);
-    const serverId = searchParams.get('serverId');
-
+  async update({
+    userId,
+    serverId,
+    channelId,
+    updateChannelDto: { name, type },
+  }: UpdateChannelPayload) {
     if (!userId) {
       throw new UnauthorizedException();
     }
@@ -65,7 +66,7 @@ export class ChannelsService {
       throw new BadRequestException();
     }
 
-    return await await this.prismaService.server.update({
+    return await this.prismaService.server.update({
       where: {
         id: serverId,
         members: {
@@ -93,10 +94,7 @@ export class ChannelsService {
     });
   }
 
-  async delete(req: Request, channelId: string, userId: string) {
-    const { searchParams } = new URL(req.url);
-    const serverId = searchParams.get('serverId');
-
+  async delete({ userId, serverId, channelId }: DeleteChannelPayload) {
     if (!userId) {
       throw new UnauthorizedException();
     }
@@ -106,24 +104,24 @@ export class ChannelsService {
     }
 
     return await this.prismaService.server.update({
-			where: {
-				id: serverId,
-				members: {
-					some: {
-						userId: userId,
-						role: {
-							in: [MemberRole.ADMIN, MemberRole.MODERATOR],
-						}
-					}
-				}
-			},
-			data: {
-				channels: {
-					delete: {
-						id: channelId,
-					}
-				}
-			}
-		});
+      where: {
+        id: serverId,
+        members: {
+          some: {
+            userId: userId,
+            role: {
+              in: [MemberRole.ADMIN, MemberRole.MODERATOR],
+            },
+          },
+        },
+      },
+      data: {
+        channels: {
+          delete: {
+            id: channelId,
+          },
+        },
+      },
+    });
   }
 }

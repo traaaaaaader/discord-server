@@ -1,60 +1,46 @@
 import {
   Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
 } from '@nestjs/common';
-import { JwtAccessGuard, CurrentUser } from '@app/auth';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ServersService } from './servers.service';
-import { CreateServerDto } from './dto/create-server.dto';
+import { CreateServerDto } from '@app/database';
 
-@UseGuards(JwtAccessGuard)
-@Controller('servers')
+@Controller()
 export class ServersController {
   constructor(private readonly serversService: ServersService) {}
 
-  @Post()
+  @MessagePattern({ cmd: "create-server" })
   async create(
-    @CurrentUser('id') userId: string,
-    @Body() createServerDto: CreateServerDto,
+    @Payload() data: { userId: string; createServerDto: CreateServerDto }
   ) {
-    return await this.serversService.create(userId, createServerDto);
+    return await this.serversService.create(data.userId, data.createServerDto);
   }
 
-  @Patch(':serverId')
+  @MessagePattern({ cmd: "update-server" })
   async update(
-    @Param('serverId') serverId: string,
-    @CurrentUser('id') userId: string,
-    @Body() updateServerDto: CreateServerDto,
+    @Payload() data: { serverId: string; userId: string; updateServerDto: CreateServerDto }
   ) {
-    return await this.serversService.update(serverId, userId, updateServerDto);
+    return await this.serversService.update(data.serverId, data.userId, data.updateServerDto);
   }
 
-  @Delete(':serverId')
+  @MessagePattern({ cmd: "delete-server" })
   async delete(
-    @Param('serverId') serverId: string,
-    @CurrentUser('id') userId: string,
+    @Payload() data: { serverId: string; userId: string}
   ) {
-    return await this.serversService.delete(serverId, userId);
+    return await this.serversService.delete(data.serverId, data.userId);
   }
 
-  @Patch(':serverId/invite-code')
+  @MessagePattern({ cmd: "invite-server" })
   async invite(
-    @Param('serverId') serverId: string,
-    @CurrentUser('id') userId: string,
+    @Payload() data: { serverId: string; userId: string}
   ) {
-    return this.serversService.invite(serverId, userId);
+    return this.serversService.invite(data.serverId, data.userId);
   }
 
-  @Patch(':serverId/leave')
+  @MessagePattern({ cmd: "leave-server" })
   async leave(
-    @Param('serverId') serverId: string,
-    @CurrentUser('id') userId: string,
+    @Payload() data: { serverId: string; userId: string}
   ) {
-    return await this.serversService.leave(serverId, userId);
+    return await this.serversService.leave(data.serverId, data.userId);
   }
 }

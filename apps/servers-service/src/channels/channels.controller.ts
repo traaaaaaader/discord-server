@@ -1,47 +1,28 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-} from '@nestjs/common';
-import { JwtAccessGuard, CurrentUser } from '@app/auth';
+import { Controller } from '@nestjs/common';
 import { ChannelsService } from './channels.service';
-import { CreateChannelDto } from './dto/create-channel.dto';
-import { UpdateChannelDto } from './dto/update-channel.dto';
+import {
+  CreateChannelPayload,
+  DeleteChannelPayload,
+  UpdateChannelPayload,
+} from '@app/database';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 
-@UseGuards(JwtAccessGuard)
-@Controller('channels')
+@Controller()
 export class ChannelsController {
   constructor(private readonly channelsService: ChannelsService) {}
 
-  @Post()
-  async create(
-    req: Request,
-    @CurrentUser('id') userId: string,
-    @Body() createChannelDto: CreateChannelDto,
-  ) {
-    return await this.channelsService.create(req, userId, createChannelDto);
+  @MessagePattern({ cmd: "create-channel" })
+  async create(@Payload() payload: CreateChannelPayload) {
+    return await this.channelsService.create(payload);
   }
 
-  @Patch(':channelId')
-  async update(
-    req: Request,
-    @Param('channelId') channelId: string,
-    @CurrentUser('id') userId: string,
-    @Body() updateChannelDto: UpdateChannelDto,
-  ) {
-    return await this.channelsService.update(req, channelId, userId, updateChannelDto);
+  @MessagePattern({ cmd: "update-channel" })
+  async update(@Payload() payload: UpdateChannelPayload) {
+    return await this.channelsService.update(payload);
   }
 
-  @Delete(':channelId')
-  async delete(
-    req: Request,
-    @Param('channelId') channelId: string,
-    @CurrentUser('id') userId: string,
-  ) {
-    return await this.channelsService.delete(req, channelId, userId);
+  @MessagePattern({ cmd: "delete-channel" })
+  async delete(@Payload() payload: DeleteChannelPayload) {
+    return await this.channelsService.delete(payload);
   }
 }

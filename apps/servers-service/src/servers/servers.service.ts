@@ -4,13 +4,17 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-import { MemberRole } from '@prisma/client';
-import { PrismaService } from '@app/database';
-import { CreateServerDto } from './dto/create-server.dto';
+import { MemberRole } from '@prisma/db-server';
+import { CreateServerDto } from '@app/database';
+import { UsersService } from '@app/users';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class ServersService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly userService: UsersService,
+  ) {}
 
   async create(userId: string, { name, imageUrl }: CreateServerDto) {
     if (!userId) {
@@ -19,6 +23,21 @@ export class ServersService {
 
     if (!name) {
       throw new BadRequestException();
+    }
+
+    const userFromServers = await this.prismaService.user.findFirst({
+      where: {
+        id: userId,
+      },
+    })
+
+    if(!userFromServers) {
+      const {hashedPassword, ...user} = await this.userService.findOne({ id: userId });
+      await this.prismaService.user.create({
+        data: {
+          ...user,
+        }
+      })
     }
 
     return await this.prismaService.server.create({
@@ -59,7 +78,7 @@ export class ServersService {
   }
 
   async delete(serverId: string, userId: string) {
-    if(!userId) {
+    if (!userId) {
       throw new UnauthorizedException();
     }
 
@@ -72,7 +91,7 @@ export class ServersService {
   }
 
   async invite(serverId: string, userId: string) {
-    if(!userId) {
+    if (!userId) {
       throw new UnauthorizedException();
     }
 
@@ -92,7 +111,7 @@ export class ServersService {
   }
 
   async leave(serverId: string, userId: string) {
-    if(!userId) {
+    if (!userId) {
       throw new UnauthorizedException();
     }
 

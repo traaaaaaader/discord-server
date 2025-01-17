@@ -1,17 +1,46 @@
 import { NestFactory } from '@nestjs/core';
 import { ServersModule } from './servers/servers.module';
-import { ValidationPipe } from '@nestjs/common';
-import * as cookieParser from 'cookie-parser';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { ChannelsModule } from './channels/channels.module';
+import { MembersModule } from './members/members.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(ServersModule);
-  app.useGlobalPipes(new ValidationPipe());
+  const serverApp = await NestFactory.createMicroservice<MicroserviceOptions>(
+    ServersModule,
+    {
+      transport: Transport.RMQ,
+      options: {
+        urls: ['amqp://localhost:5672'],
+        queue: 'servers_queue',
+        queueOptions: { durable: false },
+      },
+    },
+  );
 
-  app.use(cookieParser());
-  await app
-    .listen(process.env.port ?? 3001)
-    .then(() =>
-      console.log(`Servers service start on ${process.env.port ?? 3001} port`),
-    );
+  const channelApp = await NestFactory.createMicroservice<MicroserviceOptions>(
+    ChannelsModule,
+    {
+      transport: Transport.RMQ,
+      options: {
+        urls: ['amqp://localhost:5672'],
+        queue: 'channels_queue',
+        queueOptions: { durable: false },
+      },
+    },
+  );
+
+  const memberApp = await NestFactory.createMicroservice<MicroserviceOptions>(
+    MembersModule,
+    {
+      transport: Transport.RMQ,
+      options: {
+        urls: ['amqp://localhost:5672'],
+        queue: 'members_queue',
+        queueOptions: { durable: false },
+      },
+    },
+  );
+
+  await Promise.all([serverApp.listen(), channelApp.listen(), memberApp.listen()]);
 }
 bootstrap();

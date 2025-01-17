@@ -1,62 +1,32 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Req,
-  Res,
-  UseGuards,
-} from '@nestjs/common';
-import { Request, Response } from 'express';
-import { AuthGuard } from '@nestjs/passport';
-import { AuthService, CurrentUser, RegisterDto, GoogleGuard } from '@app/auth';
-import { CreateUserDto } from '@app/users/dto/create-user.dto';
+import { Controller } from '@nestjs/common';
+import { AuthService, RegisterDto } from '@app/auth';
+import { CreateUserDto } from '@app/auth/dto/create-user.dto';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 
-@Controller('auth')
+@Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('register')
-  async register(
-    @Body() dto: RegisterDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return await this.authService.register(dto, res);
+  @MessagePattern({ cmd: 'register' })
+  async register(@Payload() dto: RegisterDto) {
+    return await this.authService.register(dto);
   }
 
-  @UseGuards(AuthGuard('local'))
-  @Post('login')
-  async login(
-    @CurrentUser('id') userId: string,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return await this.authService.generateTokens(userId, res);
+  @MessagePattern({ cmd: 'login' })
+  async login(@Payload() userId: string) {
+    return await this.authService.generateTokens(userId);
   }
 
-  @UseGuards(AuthGuard('jwt-refresh'))
-  @Post('refresh')
-  async refresh(
-    @CurrentUser('id') userId: string,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return await this.authService.generateTokens(userId, res);
+  @MessagePattern({ cmd: 'refresh' })
+  async refresh(@Payload() userId: string ) {
+    return await this.authService.generateTokens(userId);
   }
 
-  @Post('logout')
-  async logout(@Res({ passthrough: true }) res: Response) {
-    res.cookie('refreshToken', '');
-  }
-
-  @UseGuards(GoogleGuard)
-  @Get('google')
+  @MessagePattern({ cmd: 'google' })
   google() {}
 
-  @UseGuards(GoogleGuard)
-  @Get('google/callback')
-  async googleCallback(
-    @Req() req: Request & { user: CreateUserDto },
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return await this.authService.googleAuth(req, res);
+  @MessagePattern({ cmd: 'google/callback' })
+  async googleCallback(@Payload() user: CreateUserDto) {
+    return await this.authService.googleAuth(user);
   }
 }

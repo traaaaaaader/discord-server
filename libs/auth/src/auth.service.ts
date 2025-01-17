@@ -1,10 +1,9 @@
-import { Request, Response } from 'express';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { hash, verify } from 'argon2';
 
-import { CreateUserDto } from '@app/users/dto/create-user.dto';
+import { CreateUserDto } from '@app/auth/dto/create-user.dto';
 import { UsersService } from '@app/users/users.service';
 import { RegisterDto } from './dto/register.dto';
 
@@ -18,7 +17,6 @@ export class AuthService {
 
   async register(
     { email, name, password, imageUrl }: RegisterDto,
-    res: Response,
   ) {
     const hashedPassword = await hash(password);
 
@@ -29,20 +27,20 @@ export class AuthService {
       imageUrl,
     });
 
-    return await this.generateTokens(createdUser.id, res);
+    return await this.generateTokens(createdUser.id);
   }
 
-  async googleAuth(req: Request & { user: CreateUserDto }, res: Response) {
-    if (!req.user) {
+  async googleAuth(user: CreateUserDto ) {
+    if (user) {
       return 'no user from google';
     }
 
-    const { email, name, imageUrl } = req.user;
+    const { email, name, imageUrl } = user;
 
     const userByEmail = await this.usersService.findOne({ email });
 
     if (userByEmail) {
-      return await this.generateTokens(userByEmail.id, res);
+      return await this.generateTokens(userByEmail.id);
     }
 
     const createdUser = await this.usersService.create(
@@ -50,11 +48,11 @@ export class AuthService {
       'oauth',
     );
 
-    return await this.generateTokens(createdUser.id, res);
+    return await this.generateTokens(createdUser.id);
   }
 
-  async generateTokens(userId: string, res: Response) {
-    const accesToken = await this.jwtService.signAsync(
+  async generateTokens(userId: string) {
+    const accessToken = await this.jwtService.signAsync(
       { userId },
       {
         secret: this.configService.getOrThrow('JWT_ACCESS_SECRET'),
@@ -68,13 +66,8 @@ export class AuthService {
         expiresIn: this.configService.getOrThrow('JWT_REFRESH_EXPIRES'),
       },
     );
-    
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: true,
-    });
 
-    return accesToken;
+    return { accessToken, refreshToken };
   }
 
   async validateUser(email: string, password: string) {

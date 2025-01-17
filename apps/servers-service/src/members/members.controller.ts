@@ -1,30 +1,20 @@
-import { Controller, Body, Patch, Param, UseGuards, Delete } from '@nestjs/common';
-import { JwtAccessGuard, CurrentUser } from '@app/auth';
+import { Controller } from '@nestjs/common';
 import { MembersService } from './members.service';
-import { UpdateMemberDto } from './dto/update-member.dto';
+import { UpdateMemberPayload } from '@app/database';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { DeleteMemberPayload } from '@app/database';
 
-
-@UseGuards(JwtAccessGuard)
-@Controller('members')
+@Controller()
 export class MembersController {
   constructor(private readonly membersService: MembersService) {}
 
-  @Delete(':memberId')
-  async delete(
-    req: Request,
-    @Param('memberId') memberId: string,
-    @CurrentUser('id') userId: string,
-  ) {
-    return await this.membersService.delete(req, memberId, userId);
+  @MessagePattern({ cmd: "delete-member" })
+  async delete(@Payload() payload: DeleteMemberPayload) {
+    return await this.membersService.delete(payload);
   }
 
-  @Patch(':memberId')
-  async update(
-    req: Request,
-    @Param('memberId') memberId: string,
-    @CurrentUser('id') userId: string,
-    @Body() updateMemberDto: UpdateMemberDto,
-  ) {
-    return await this.membersService.update(req, memberId, userId, updateMemberDto);
+  @MessagePattern({ cmd: "update-member" })
+  async update(@Payload() payload: UpdateMemberPayload) {
+    return await this.membersService.update(payload);
   }
 }

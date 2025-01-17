@@ -37,13 +37,13 @@
         "tsConfigPath": "apps/chat-service/tsconfig.app.json"
       }
     },
-    "database": {
-      "type": "library",
-      "root": "libs/database",
-      "entryFile": "index",
-      "sourceRoot": "libs/database/src",
+    "gateway-service": {
+      "type": "application",
+      "root": "apps/gateway-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/gateway-service/src",
       "compilerOptions": {
-        "tsConfigPath": "libs/database/tsconfig.lib.json"
+        "tsConfigPath": "apps/gateway-service/tsconfig.app.json"
       }
     },
     "auth": {
@@ -55,6 +55,15 @@
         "tsConfigPath": "libs/auth/tsconfig.lib.json"
       }
     },
+    "files": {
+      "type": "library",
+      "root": "libs/files",
+      "entryFile": "index",
+      "sourceRoot": "libs/files/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/files/tsconfig.lib.json"
+      }
+    },
     "users": {
       "type": "library",
       "root": "libs/users",
@@ -64,13 +73,13 @@
         "tsConfigPath": "libs/users/tsconfig.lib.json"
       }
     },
-    "files": {
+    "database": {
       "type": "library",
-      "root": "libs/files",
+      "root": "libs/database",
       "entryFile": "index",
-      "sourceRoot": "libs/files/src",
+      "sourceRoot": "libs/database/src",
       "compilerOptions": {
-        "tsConfigPath": "libs/files/tsconfig.lib.json"
+        "tsConfigPath": "libs/database/tsconfig.lib.json"
       }
     }
   }

@@ -3,9 +3,9 @@ import {
   ConflictException,
   Injectable,
 } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { FindUserDto } from './dto/find-user.dto';
-import { PrismaService } from '@app/database';
+import { CreateUserDto } from '../../auth/src/dto/create-user.dto';
+import { FindUserDto } from '../../auth/src/dto/find-user.dto';
+import { PrismaService } from '../../auth/prisma/prisma.service';
 
 
 @Injectable()
