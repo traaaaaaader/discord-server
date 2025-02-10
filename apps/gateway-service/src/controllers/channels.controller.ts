@@ -8,6 +8,7 @@ import {
   UseGuards,
   Inject,
   Query,
+  Get,
 } from '@nestjs/common';
 import { JwtAccessGuard, CurrentUser } from '@app/auth';
 import { CreateChannelDto, UpdateChannelDto } from '@app/database';
@@ -20,6 +21,19 @@ export class ChannelsController {
   constructor(
     @Inject('CHANNELS_CLIENT') private readonly channelsClient: ClientProxy,
   ) {}
+
+  @Get()
+  async get(@Query() query: { channelId: string }) {
+    const { channelId } = query;
+
+    const result = await firstValueFrom(
+      this.channelsClient.send(
+        { cmd: 'get-channel' },
+        { channelId },
+      ),
+    );
+    return result;
+  }
 
   @Post()
   async create(

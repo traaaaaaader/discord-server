@@ -7,6 +7,7 @@ import {
   Delete,
   Inject,
   Query,
+  Get,
 } from '@nestjs/common';
 import { JwtAccessGuard, CurrentUser } from '@app/auth';
 import { UpdateMemberDto } from '@app/database';
@@ -19,6 +20,22 @@ export class MembersController {
   constructor(
     @Inject('MEMBERS_CLIENT') private readonly membersClient: ClientProxy,
   ) {}
+
+  @Get()
+  async get(
+    @Query() query: {serverId: string},
+    @CurrentUser('id') userId: string,
+  ) {
+    const serverId = query.serverId;
+
+    const result = await firstValueFrom(
+      this.membersClient.send(
+        { cmd: 'get-member' },
+        { serverId, userId },
+      ),
+    );
+    return result;
+  }
 
   @Delete(':memberId')
   async delete(

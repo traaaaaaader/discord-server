@@ -1,4 +1,4 @@
-import { Controller, Post, Patch, Body, Param, Inject, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Post, Patch, Body, Param, Inject, Delete, UseGuards, Get } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser, JwtAccessGuard } from '@app/auth';
@@ -9,6 +9,17 @@ import { CreateServerDto } from '@app/database';
 @Controller('servers')
 export class ServersController {
   constructor(@Inject('SERVERS_CLIENT') private readonly serversClient: ClientProxy) {}
+
+  @Get(':serverId')
+  async get(
+		@Param('serverId') serverId: string,
+		@CurrentUser('id') userId: string,
+	) {
+    const result = await firstValueFrom(
+      this.serversClient.send({ cmd: 'get-server' }, { serverId, userId }),
+    );
+    return result;
+  }
 
   @Post()
   async create(

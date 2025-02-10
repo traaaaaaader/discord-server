@@ -7,6 +7,8 @@ import {
   ChannelsController,
   MembersController,
 } from './controllers';
+import { MessagesController } from './controllers/messages.controller';
+import { DirectMessagesController } from './controllers/direct-messages.controller';
 
 @Module({
   imports: [
@@ -21,15 +23,15 @@ import {
           queueOptions: { durable: false },
         },
       },
-      // {
-      //   name: 'CHAT_SERVICE',
-      //   transport: Transport.RMQ,
-      //   options: {
-      //     urls: ['amqp://localhost:5672'],
-      //     queue: 'chat_queue',
-      //     queueOptions: { durable: false },
-      //   },
-      // },
+      {
+        name: 'CHAT_CLIENT',
+        transport: Transport.RMQ,
+        options: {
+          urls: ['amqp://localhost:5672'],
+          queue: 'chat_queue',
+          queueOptions: { durable: false },
+        },
+      },
       {
         name: 'SERVERS_CLIENT',
         transport: Transport.RMQ,
@@ -64,6 +66,8 @@ import {
     AuthController,
     ChannelsController,
     MembersController,
+    MessagesController,
+    DirectMessagesController,
   ],
 })
 export class GatewayServiceModule {}

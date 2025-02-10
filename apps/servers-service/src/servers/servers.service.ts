@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -8,6 +9,7 @@ import { MemberRole } from '@prisma/db-server';
 import { CreateServerDto } from '@app/database';
 import { UsersService } from '@app/users';
 import { PrismaService } from '../../prisma/prisma.service';
+import { MessagePattern } from '@nestjs/microservices';
 
 @Injectable()
 export class ServersService {
@@ -29,15 +31,17 @@ export class ServersService {
       where: {
         id: userId,
       },
-    })
+    });
 
-    if(!userFromServers) {
-      const {hashedPassword, ...user} = await this.userService.findOne({ id: userId });
+    if (!userFromServers) {
+      const { hashedPassword, ...user } = await this.userService.findOne({
+        id: userId,
+      });
       await this.prismaService.user.create({
         data: {
           ...user,
-        }
-      })
+        },
+      });
     }
 
     return await this.prismaService.server.create({
@@ -139,5 +143,22 @@ export class ServersService {
         },
       },
     });
+  }
+
+  async findServer(serverId: string, userId: string) {
+    const server = await this.prismaService.server.findFirst({
+      where: {
+        id: serverId as string,
+        members: {
+          some: {
+            userId,
+          },
+        },
+      },
+      include: {
+        members: true,
+      },
+    });
+    return server;
   }
 }

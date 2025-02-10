@@ -1,8 +1,19 @@
 import { NestFactory } from '@nestjs/core';
-import { ChatServiceModule } from './chat-service.module';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { ChatModule } from './chat.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(ChatServiceModule);
-  await app.listen(process.env.port ?? 3000);
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+    ChatModule,
+    {
+      transport: Transport.RMQ,
+      options: {
+        urls: ['amqp://localhost:5672'],
+        queue: 'chat_queue',
+        queueOptions: { durable: false },
+      },
+    },
+  );
+  await app.listen();
 }
 bootstrap();
