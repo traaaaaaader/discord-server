@@ -133,7 +133,7 @@ export class ChannelsService {
     });
   }
 
-  async findChannel(serverId: string, channelId: string) {
+  async getChannel(serverId: string, channelId: string) {
     const server = await this.prismaService.channel.findFirst({
       where: {
         id: channelId as string,

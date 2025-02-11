@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { DirectMessagesService } from './direct-messages.service';
 import { EventPattern, Payload } from '@nestjs/microservices';
-import { CreateMessageDto } from '@app/database';
+import { CreateMessageDto } from '../dto/create-message.dto';
 
 @Controller()
 export class DirectMessagesController {

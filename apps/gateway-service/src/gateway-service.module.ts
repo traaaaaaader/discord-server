@@ -1,18 +1,20 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { AuthModule } from '@app/auth';
+import { FilesModule } from '@app/files';
 import {
   AuthController,
   ServersController,
   ChannelsController,
   MembersController,
+  MessagesController,
+  DirectMessagesController,
 } from './controllers';
-import { MessagesController } from './controllers/messages.controller';
-import { DirectMessagesController } from './controllers/direct-messages.controller';
 
 @Module({
   imports: [
     AuthModule,
+    FilesModule,
     ClientsModule.register([
       {
         name: 'AUTH_CLIENT',

@@ -9,7 +9,6 @@ import { MemberRole } from '@prisma/db-server';
 import { CreateServerDto } from '@app/database';
 import { UsersService } from '@app/users';
 import { PrismaService } from '../../prisma/prisma.service';
-import { MessagePattern } from '@nestjs/microservices';
 
 @Injectable()
 export class ServersService {
@@ -24,7 +23,7 @@ export class ServersService {
     }
 
     if (!name) {
-      throw new BadRequestException();
+      throw new BadRequestException("Missing name");
     }
 
     const userFromServers = await this.prismaService.user.findFirst({
@@ -145,7 +144,7 @@ export class ServersService {
     });
   }
 
-  async findServer(serverId: string, userId: string) {
+  async getServer(serverId: string, userId: string) {
     const server = await this.prismaService.server.findFirst({
       where: {
         id: serverId as string,

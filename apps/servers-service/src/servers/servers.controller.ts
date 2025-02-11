@@ -47,6 +47,6 @@ export class ServersController {
 
   @MessagePattern({ cmd: 'get-server' })
   async findServer(@Payload() data: { serverId: string; userId: string }) {
-    return await this.serversService.findServer(data.serverId, data.userId);
+    return await this.serversService.getServer(data.serverId, data.userId);
   }
 }

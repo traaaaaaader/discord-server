@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateMessageDto } from '@app/database';
 import { ChatGateway } from '../chat.gateway';
 import { MemberRole } from '@prisma/client';
 import { UsersService } from '@app/users';
+import { CreateMessageDto } from '../dto/create-message.dto';
 
 @Injectable()
 export class DirectMessagesService {

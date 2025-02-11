@@ -31,9 +31,9 @@ export class ChannelsController {
     return await this.channelsService.delete(payload);
   }
 
-  @MessagePattern({ cmd: 'find-channel' })
-  async findChannel(@Payload() data: { serverId: string; channelId: string }) {
-    return await this.channelsService.findChannel(
+  @MessagePattern({ cmd: 'get-channel' })
+  async getChannel(@Payload() data: { serverId: string; channelId: string }) {
+    return await this.channelsService.getChannel(
       data.serverId,
       data.channelId,
     );

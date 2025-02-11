@@ -6,6 +6,6 @@ export class CreateMessageDto {
 	@IsString()
 	@MinLength(5)
 	content: string;
-	@IsString()
+
 	fileUrl?: string;
 }

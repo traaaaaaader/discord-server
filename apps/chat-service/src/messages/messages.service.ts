@@ -1,11 +1,11 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateMessageDto } from '@app/database';
 import { firstValueFrom } from 'rxjs';
 import { ClientProxy } from '@nestjs/microservices';
 import { ChatGateway } from '../chat.gateway';
 import { MemberRole } from '@prisma/client';
 import { UsersService } from '@app/users';
+import { CreateMessageDto } from '../dto/create-message.dto';
 
 @Injectable()
 export class MessagesService {
@@ -30,7 +30,7 @@ export class MessagesService {
     }
 
     const server = await firstValueFrom(
-      this.serversClient.send({ cmd: 'find-server' }, { serverId, userId }),
+      this.serversClient.send({ cmd: 'get-server' }, { serverId, userId }),
     );
 
     if (!server) {
@@ -39,7 +39,7 @@ export class MessagesService {
 
     const channelExist = await firstValueFrom(
       this.channelsClient.send(
-        { cmd: 'find-channel' },
+        { cmd: 'get-channel' },
         { serverId, channelId },
       ),
     );
@@ -203,7 +203,7 @@ export class MessagesService {
 
     const channelExist = await firstValueFrom(
       this.channelsClient.send(
-        { cmd: 'find-channel' },
+        { cmd: 'get-channel' },
         { serverId, channelId },
       ),
     );
