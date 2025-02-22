@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
@@ -7,52 +6,28 @@ import {
   Post,
   Req,
   Res,
-  UploadedFile,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
-import { CurrentUser, GoogleGuard } from '@app/auth';
-import { CreateUserDto } from '@app/auth/dto/create-user.dto';
+import { CurrentUser, GoogleGuard, RegisterDto, CreateUserDto } from '@app/auth';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { FilesService } from '@app/files';
+
 
 @Controller('auth')
 export class AuthController {
   constructor(
     @Inject('AUTH_CLIENT') private readonly authClient: ClientProxy,
-    private readonly filesService: FilesService,
   ) {}
 
   @Post('register')
-  @UseInterceptors(
-    FileInterceptor('imageFile', {
-      fileFilter: (req, file, callback) => {
-        if (file && !file.mimetype.startsWith('image/')) {
-          return callback(new Error('File must be an image'), false);
-        }
-        callback(null, true);
-      },
-      limits: { fileSize: 5 * 1024 * 1024 },
-    }),
-  )
   async register(
-    @Body() body: { name: string; email: string; password: string },
+    @Body() body: RegisterDto,
     @Res({ passthrough: true }) res: Response,
-    @UploadedFile() imageFile?: Express.Multer.File,
   ) {
-    let imageUrl: string | undefined;
-
-    if (imageFile) {
-      const fileName = await this.filesService.uploadFile(imageFile);
-      imageUrl = await this.filesService.getFileUrl(fileName);
-    }
-
     const result = await firstValueFrom(
-      this.authClient.send({ cmd: 'register' }, { ...body, imageUrl }),
+      this.authClient.send({ cmd: 'register' }, body),
     );
 
     res.cookie('refreshToken', result.refreshToken, {

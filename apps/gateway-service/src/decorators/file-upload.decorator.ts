@@ -9,7 +9,7 @@ export const FileUpload = () => {
     descriptor: PropertyDescriptor,
   ) => {
     UseInterceptors(
-      FileInterceptor('fileUrl', {
+      FileInterceptor('file', {
         fileFilter: (req, file, callback) => {
           const allowedMimeTypes = [
             'image/',

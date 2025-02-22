@@ -12,8 +12,8 @@ export class ChannelsController {
   constructor(private readonly channelsService: ChannelsService) {}
 
   @MessagePattern({ cmd: 'get-channel' })
-  async get(@Payload() payload: {channelId: string}) {
-    return await this.channelsService.get(payload.channelId);
+  async get(@Payload() payload: { channelId: string; serverId?: string }) {
+    return await this.channelsService.get(payload.channelId, payload.serverId);
   }
 
   @MessagePattern({ cmd: 'create-channel' })
@@ -31,11 +31,8 @@ export class ChannelsController {
     return await this.channelsService.delete(payload);
   }
 
-  @MessagePattern({ cmd: 'get-channel' })
-  async getChannel(@Payload() data: { serverId: string; channelId: string }) {
-    return await this.channelsService.getChannel(
-      data.serverId,
-      data.channelId,
-    );
+  @MessagePattern({ cmd: 'get-channels' })
+  async getChannels(@Payload() data: { serverId: string; channelId: string }) {
+    return await this.channelsService.getChannels(data.serverId);
   }
 }

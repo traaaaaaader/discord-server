@@ -6,42 +6,30 @@ import {
   Patch,
   Post,
   Query,
-  UploadedFile,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser, JwtAccessGuard } from '@app/auth';
-import { FilesService } from '@app/files';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { FileUpload } from '../decorators/file-upload.decorator';
+import { CreateMessageDto } from '@app/database';
 
 @UseGuards(JwtAccessGuard)
 @Controller('direct-messages')
 export class DirectMessagesController {
   constructor(
     @Inject('CHAT_CLIENT') private readonly chatClient: ClientProxy,
-    private readonly filesService: FilesService,
   ) {}
 
   @Post()
-  @FileUpload() 
   async send(
     @CurrentUser('id') userId: string,
-    @Body("content") content: string,
+    @Body() body: CreateMessageDto,
     @Query() query: { conversationId: string },
-    @UploadedFile() file?: Express.Multer.File,
   ) {
-    let fileUrl: string | undefined;
-
-    if (file) {
-      const fileName = await this.filesService.uploadFile(file);
-      fileUrl = await this.filesService.getFileUrl(fileName);
-    }
-
     const result = await firstValueFrom(
       this.chatClient.send(
         { cmd: 'send-direct-message' },
-        { userId, message: {content, fileUrl}, query },
+        { userId, body, query },
       ),
     );
     return result;
@@ -51,7 +39,12 @@ export class DirectMessagesController {
   async update(
     @CurrentUser('id') userId: string,
     @Body() content: string,
-    @Query() query: { directMessageId: string; conversationid: string; serverId: string },
+    @Query()
+    query: {
+      directMessageId: string;
+      conversationid: string;
+      serverId: string;
+    },
   ) {
     const result = await firstValueFrom(
       this.chatClient.send(

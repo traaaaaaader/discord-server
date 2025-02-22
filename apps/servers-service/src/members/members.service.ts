@@ -10,11 +10,19 @@ import { DeleteMemberPayload, UpdateMemberPayload } from '@app/database';
 export class MembersService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async get(serverId: string, userId: string) {
+  async getOne(serverId: string, userId: string) {
     return await this.prismaService.member.findFirst({
       where: {
         serverId: serverId,
         userId: userId,
+      },
+    });;
+  }
+
+  async getAll(serverId: string) {
+    return await this.prismaService.member.findMany({
+      where: {
+        serverId: serverId,
       },
     });
   }

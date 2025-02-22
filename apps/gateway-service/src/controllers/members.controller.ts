@@ -22,7 +22,7 @@ export class MembersController {
   ) {}
 
   @Get()
-  async get(
+  async getOne(
     @Query() query: {serverId: string},
     @CurrentUser('id') userId: string,
   ) {
@@ -32,6 +32,21 @@ export class MembersController {
       this.membersClient.send(
         { cmd: 'get-member' },
         { serverId, userId },
+      ),
+    );
+    return result;
+  }
+
+  @Get()
+  async getAll(
+    @Query() query: {serverId: string}
+  ) {
+    const serverId = query.serverId;
+
+    const result = await firstValueFrom(
+      this.membersClient.send(
+        { cmd: 'get-members' },
+        { serverId },
       ),
     );
     return result;

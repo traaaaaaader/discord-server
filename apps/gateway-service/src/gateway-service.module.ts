@@ -10,6 +10,7 @@ import {
   MessagesController,
   DirectMessagesController,
 } from './controllers';
+import { FilesController } from './controllers/files.controller';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import {
     MembersController,
     MessagesController,
     DirectMessagesController,
+    FilesController,
   ],
 })
 export class GatewayServiceModule {}

@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ChatGateway } from '../chat.gateway';
 import { MemberRole } from '@prisma/client';
 import { UsersService } from '@app/users';
-import { CreateMessageDto } from '../dto/create-message.dto';
+import { CreateMessageDto } from '../../../../libs/database/src/dto/chat/create-message.dto';
 
 @Injectable()
 export class DirectMessagesService {

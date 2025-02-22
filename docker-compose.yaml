@@ -15,6 +15,7 @@ services:
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: supersecret
+    restart: always
     ports:
       - '9000:9000'
       - '9001:9001'

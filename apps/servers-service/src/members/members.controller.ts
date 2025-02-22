@@ -9,8 +9,13 @@ export class MembersController {
   constructor(private readonly membersService: MembersService) {}
 
   @MessagePattern({ cmd: 'get-member' })
-  async get(@Payload() payload: { serverId: string; userId: string }) {
-    return await this.membersService.get(payload.serverId, payload.userId);
+  async getOne(@Payload() payload: { serverId: string; userId: string }) {
+    return await this.membersService.getOne(payload.serverId, payload.userId);
+  }
+
+  @MessagePattern({ cmd: 'get-members' })
+  async getAll(@Payload() payload: { serverId: string }) {
+    return await this.membersService.getAll(payload.serverId);
   }
 
   @MessagePattern({ cmd: 'delete-member' })

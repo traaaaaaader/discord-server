@@ -11,6 +11,7 @@ export class ServersController {
   async create(
     @Payload() data: { userId: string; createServerDto: CreateServerDto },
   ) {
+    console.log("createServerDto = ", data.createServerDto);
     return await this.serversService.create(data.userId, data.createServerDto);
   }
 
@@ -46,7 +47,13 @@ export class ServersController {
   }
 
   @MessagePattern({ cmd: 'get-server' })
-  async findServer(@Payload() data: { serverId: string; userId: string }) {
+  async getServer(@Payload() data: { serverId: string; userId: string }) {
     return await this.serversService.getServer(data.serverId, data.userId);
+  }
+  
+
+  @MessagePattern({ cmd: 'get-servers' })
+  async getServers(@Payload() data: { userId: string;}) {
+    return await this.serversService.getServers(data.userId);
   }
 }

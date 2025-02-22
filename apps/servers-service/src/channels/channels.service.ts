@@ -15,13 +15,14 @@ import {
 export class ChannelsService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async get(channelId: string) {
+  async get(channelId: string, serverId?: string) {
     return await this.prismaService.channel.findUnique({
       where: {
         id: channelId,
+        ...(serverId && { serverId }),
       },
-    }); 
-  };
+    });
+  }
 
   async create({
     userId,
@@ -133,10 +134,9 @@ export class ChannelsService {
     });
   }
 
-  async getChannel(serverId: string, channelId: string) {
-    const server = await this.prismaService.channel.findFirst({
+  async getChannels(serverId: string) {
+    const server = await this.prismaService.channel.findMany({
       where: {
-        id: channelId as string,
         serverId: serverId as string,
       },
     });

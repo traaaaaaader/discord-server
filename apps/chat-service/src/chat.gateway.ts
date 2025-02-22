@@ -7,7 +7,11 @@ import { UseGuards } from '@nestjs/common';
 import { JwtAccessGuard } from '@app/auth';
 
 @UseGuards(JwtAccessGuard)
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: {
+    origin: '*',
+  },
+ })
 export class ChatGateway {
   @WebSocketServer()
   server: Server;

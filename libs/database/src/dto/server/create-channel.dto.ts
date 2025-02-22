@@ -5,7 +5,7 @@ export class CreateChannelDto {
 	@IsDefined()
 	@IsNotEmpty()
 	@IsString()
-	@MinLength(5)
+	@MinLength(1)
 	name: string;
 	@IsDefined()
 	@IsNotEmpty()

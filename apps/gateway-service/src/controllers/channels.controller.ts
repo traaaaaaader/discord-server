@@ -22,15 +22,22 @@ export class ChannelsController {
     @Inject('CHANNELS_CLIENT') private readonly channelsClient: ClientProxy,
   ) {}
 
-  @Get()
-  async get(@Query() query: { channelId: string }) {
-    const { channelId } = query;
+  @Get(':channelId')
+  async getOne(@Param('channelId') channelId: string, @Query() query) {
+    const serverId = query.serverId;
 
     const result = await firstValueFrom(
-      this.channelsClient.send(
-        { cmd: 'get-channel' },
-        { channelId },
-      ),
+      this.channelsClient.send({ cmd: 'get-channel' }, { channelId, serverId }),
+    );
+    return result;
+  }
+
+  @Get()
+  async getAll(@Query() query) {
+    const serverId = query.serverId;
+
+    const result = await firstValueFrom(
+      this.channelsClient.send({ cmd: 'get-channels' }, { serverId }),
     );
     return result;
   }

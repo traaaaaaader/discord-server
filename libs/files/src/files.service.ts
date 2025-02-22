@@ -27,21 +27,26 @@ export class FilesService {
 
   async uploadFile(file: Express.Multer.File) {
     const fileName = `${Date.now()}-${file.originalname}`;
+    const metaData = {
+      'Content-Type': file.mimetype,
+    };
     await this.minioClient.putObject(
       this.bucketName,
       fileName,
       file.buffer,
       file.size,
+      metaData,
     );
     return fileName;
   }
 
   async getFileUrl(fileName: string) {
-    return await this.minioClient.presignedUrl(
-      'GET',
-      this.bucketName,
-      fileName,
-    );
+    // return await this.minioClient.presignedUrl(
+    //   'GET',
+    //   this.bucketName,
+    //   fileName,
+    // );
+    return `http://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/${process.env.MINIO_BUCKET_NAME}/${fileName}`;
   }
 
   async deleteFile(fileName: string) {

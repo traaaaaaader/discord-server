@@ -23,7 +23,7 @@ export class ServersService {
     }
 
     if (!name) {
-      throw new BadRequestException("Missing name");
+      throw new BadRequestException('Missing name');
     }
 
     const userFromServers = await this.prismaService.user.findFirst({
@@ -155,9 +155,29 @@ export class ServersService {
         },
       },
       include: {
-        members: true,
+        members: {
+          include: {
+            user: true,
+          },
+        },
+        channels: true,
       },
     });
     return server;
+  }
+
+  async getServers(userId: string) {
+    return await this.prismaService.server.findMany({
+      where: {
+        members: {
+          some: {
+            userId: userId,
+          },
+        },
+      },
+      include: {
+        channels: true,
+      },
+    });
   }
 }
