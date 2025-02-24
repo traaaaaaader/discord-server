@@ -6,6 +6,7 @@ import { ChatGateway } from '../chat.gateway';
 import { MemberRole } from '@prisma/client';
 import { UsersService } from '@app/users';
 import { CreateMessageDto } from '../../../../libs/database/src/dto/chat/create-message.dto';
+import { get } from 'http';
 
 @Injectable()
 export class MessagesService {
@@ -18,6 +19,71 @@ export class MessagesService {
     private readonly userService: UsersService,
     private readonly chatGateway: ChatGateway,
   ) {}
+
+  async get(channelId: string, cursor?: string) {
+    try {
+
+      console.log("Get service: channelId = ", channelId, "cursor = ", cursor)
+      if (!channelId) {
+        return new BadRequestException("Channel ID missing");
+      }
+  
+      let messages = [];
+  
+      if (cursor) {
+        messages = await this.prismaService.message.findMany({
+          take: this.MESSAGES_BATCH,
+          skip: 1,
+          cursor: {
+            id: cursor,
+          },
+          where: {
+            channelId,
+          },
+          include: {
+            member: {
+              include: {
+                user: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
+      } else {
+        messages = await this.prismaService.message.findMany({
+          take: this.MESSAGES_BATCH,
+          where: {
+            channelId,
+          },
+          include: {
+            member: {
+              include: {
+                user: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
+      }
+  
+      let nextCursor = null;
+  
+      if (messages.length === this.MESSAGES_BATCH) {
+        nextCursor = messages[this.MESSAGES_BATCH - 1].id;
+      }
+  
+      return {
+        items: messages,
+        nextCursor,
+      };
+    } catch (error) {
+      console.log("[MESSAGES_GET]", error);
+    }
+  }
 
   async createMessage(
     { content, fileUrl }: CreateMessageDto,

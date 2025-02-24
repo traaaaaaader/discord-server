@@ -6,6 +6,7 @@ import { hash, verify } from 'argon2';
 import { CreateUserDto } from '@app/auth/dto/create-user.dto';
 import { UsersService } from '@app/users/users.service';
 import { RegisterDto } from './dto/register.dto';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -15,9 +16,7 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async register(
-    { email, name, password, imageUrl }: RegisterDto,
-  ) {
+  async register({ email, name, password, imageUrl }: RegisterDto) {
     const hashedPassword = await hash(password);
 
     const createdUser = await this.usersService.create({
@@ -30,7 +29,7 @@ export class AuthService {
     return await this.generateTokens(createdUser.id);
   }
 
-  async googleAuth(user: CreateUserDto ) {
+  async googleAuth(user: CreateUserDto) {
     if (user) {
       return 'no user from google';
     }
@@ -43,7 +42,7 @@ export class AuthService {
       return await this.generateTokens(userByEmail.id);
     }
 
-    const createdUser = await this.usersService.create(
+    const createdUser: User = await this.usersService.create(
       { email, name, imageUrl },
       'oauth',
     );
@@ -52,6 +51,8 @@ export class AuthService {
   }
 
   async generateTokens(userId: string) {
+    const user = await this.usersService.findOne({ id: userId });
+
     const accessToken = await this.jwtService.signAsync(
       { userId },
       {
@@ -67,7 +68,16 @@ export class AuthService {
       },
     );
 
-    return { accessToken, refreshToken };
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        imageUrl: user.imageUrl,
+      },
+    };
   }
 
   async validateUser(email: string, password: string) {

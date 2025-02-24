@@ -16,13 +16,16 @@ export class MembersService {
         serverId: serverId,
         userId: userId,
       },
-    });;
+    });
   }
 
   async getAll(serverId: string) {
     return await this.prismaService.member.findMany({
       where: {
         serverId: serverId,
+      },
+      include: {
+        user: true,
       },
     });
   }
@@ -69,8 +72,7 @@ export class MembersService {
     serverId,
     userId,
     updateMemberDto: { role },
-	}: UpdateMemberPayload
-  ) {
+  }: UpdateMemberPayload) {
     if (!userId) {
       throw new UnauthorizedException();
     }

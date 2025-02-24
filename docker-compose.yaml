@@ -1,4 +1,16 @@
 services:
+  db:
+    image: postgres
+    restart: always
+    container_name: postgres
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: discord
+    volumes:
+          - ./init.sql:/docker-entrypoint-initdb.d/init.sql
   rabbitmq:
     container_name: rabbitmq
     image: rabbitmq:4.0-management

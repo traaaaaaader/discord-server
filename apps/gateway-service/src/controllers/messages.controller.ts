@@ -2,7 +2,9 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Inject,
+  Param,
   Patch,
   Post,
   Query,
@@ -30,6 +32,23 @@ export class MessagesController {
       this.chatClient.send(
         { cmd: 'send-message' },
         { userId, message: body, query },
+      ),
+    );
+    
+    return result;
+  }
+
+  @Get()
+  async get(
+    @Query("channelId") channelId: string,
+    @Query("cursor") cursor: string,
+  ) {
+
+    console.log("Get controller gateway: channelId = ", channelId, "cursor = ", cursor)
+    const result = await firstValueFrom(
+      this.chatClient.send(
+        { cmd: 'get-messages' },
+        { channelId, cursor },
       ),
     );
     

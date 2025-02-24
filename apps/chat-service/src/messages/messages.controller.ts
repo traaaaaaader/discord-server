@@ -28,6 +28,23 @@ export class MessagesController {
     );
   }
 
+  @EventPattern({ cmd: 'get-messages' })
+  async get(
+    @Payload()
+    data: {
+      channelId: string;
+      cursor?: string;
+    },
+  ) {
+    console.log("Get controller messages: data = ", data)
+    const { cursor, channelId } = data;
+
+    return await this.messagesService.get(
+      channelId,
+      cursor,
+    );
+  }
+
   @EventPattern({ cmd: 'update-message' })
   async update(
     @Payload()

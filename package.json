@@ -9,20 +9,26 @@
     "start": "nest start",
     "build": "nest build",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
+    
     "start:all": "npm run prisma:migrate && npm run start:services",
     "start:services": "concurrently \"npm run start:auth\" \"npm run start:chat\" \"npm run start:server\" \"npm run start:gateway\"",
+
     "start:auth": "npm run start auth-service",
     "start:chat": "npm run start chat-service",
     "start:server": "npm run start servers-service",
     "start:gateway": "npm run start gateway-service",
-    "prisma:gen": "npm prisma:gen:user && npm prisma:gen:chat && npm prisma:gen:server",
+
+    "prisma:gen": "npm run prisma:gen:user && npm run prisma:gen:chat && npm run prisma:gen:server",
     "prisma:migrate": "npm run prisma:migrate:user && npm run prisma:migrate:chat && npm run prisma:migrate:server",
+
     "prisma:gen:user": "prisma generate --schema=./prisma/user/schema.prisma",
     "prisma:gen:chat": "prisma generate --schema=./prisma/chat/schema.prisma",
     "prisma:gen:server": "prisma generate --schema=./prisma/server/schema.prisma",
+
     "prisma:migrate:user": "prisma migrate dev --schema=./prisma/user/schema.prisma",
     "prisma:migrate:chat": "prisma migrate dev --schema=./prisma/chat/schema.prisma",
     "prisma:migrate:server": "prisma migrate dev --schema=./prisma/server/schema.prisma",
+
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
@@ -51,6 +57,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
+    "express-session": "^1.18.1",
     "minio": "^8.0.4",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
@@ -67,6 +74,7 @@
     "@nestjs/testing": "^10.0.0",
     "@types/cookie-parser": "^1.4.8",
     "@types/express": "^4.17.17",
+    "@types/express-session": "^1.18.1",
     "@types/jest": "^29.5.2",
     "@types/minio": "^7.1.1",
     "@types/multer": "^1.4.12",

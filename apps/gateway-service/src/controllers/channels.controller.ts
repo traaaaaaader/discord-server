@@ -23,7 +23,10 @@ export class ChannelsController {
   ) {}
 
   @Get(':channelId')
-  async getOne(@Param('channelId') channelId: string, @Query() query) {
+  async getOne(
+    @Param('channelId') channelId: string,
+    @Query() query: { serverId: string },
+  ) {
     const serverId = query.serverId;
 
     const result = await firstValueFrom(

@@ -58,8 +58,6 @@ export class DirectMessagesService {
       throw new BadRequestException('Conversation not found');
     }
 
-
-
 		const member = conversation.memberOne.userId === userId ? conversation.memberOne : conversation.memberTwo;
 
 
@@ -67,7 +65,6 @@ export class DirectMessagesService {
 			throw new BadRequestException('Member not found');
 		}
 
-		
 		const userFromChat = await this.prismaService.user.findFirst({
 			where: {
 				id: userId,
