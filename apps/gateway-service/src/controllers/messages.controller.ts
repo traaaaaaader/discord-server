@@ -43,15 +43,13 @@ export class MessagesController {
     @Query("channelId") channelId: string,
     @Query("cursor") cursor: string,
   ) {
-
-    console.log("Get controller gateway: channelId = ", channelId, "cursor = ", cursor)
     const result = await firstValueFrom(
       this.chatClient.send(
         { cmd: 'get-messages' },
         { channelId, cursor },
       ),
     );
-    
+
     return result;
   }
 
@@ -67,6 +65,7 @@ export class MessagesController {
         { userId, content, query },
       ),
     );
+
     return result;
   }
 
@@ -75,9 +74,11 @@ export class MessagesController {
     @CurrentUser('id') userId: string,
     @Query() query: { messageId: string; channelId: string; serverId: string },
   ) {
+    console.log(userId, query);
     const result = await firstValueFrom(
       this.chatClient.send({ cmd: 'delete-message' }, { userId, query }),
     );
+
     return result;
   }
 }

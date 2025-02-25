@@ -3,8 +3,9 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ChatModule } from './chat.module';
 
 async function bootstrap() {
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    ChatModule,
+  const app = await NestFactory.create(ChatModule);
+
+  const microserviceChat = await app.connectMicroservice<MicroserviceOptions>(
     {
       transport: Transport.RMQ,
       options: {
@@ -14,6 +15,8 @@ async function bootstrap() {
       },
     },
   );
-  await app.listen();
+
+  await app.startAllMicroservices();
+  await app.listen(3001);
 }
 bootstrap();

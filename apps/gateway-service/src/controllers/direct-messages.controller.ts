@@ -32,7 +32,7 @@ export class DirectMessagesController {
         { userId, body, query },
       ),
     );
-    return result;
+    return result;  
   }
 
   @Patch()

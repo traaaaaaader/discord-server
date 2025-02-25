@@ -1,32 +1,20 @@
 import {
   WebSocketGateway,
   WebSocketServer,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { UseGuards } from '@nestjs/common';
+import { Server } from 'socket.io';
 import { JwtAccessGuard } from '@app/auth';
+import { UseGuards } from '@nestjs/common';
 
 @UseGuards(JwtAccessGuard)
 @WebSocketGateway({
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-    credentials: true,
+    origin: 'http://localhost:1420',
   },
+  path: "/socket/io",
+  addTrailingSlash: false,
 })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway {
   @WebSocketServer()
   server: Server;
-
-  handleConnection(client: Socket) {
-    console.log('Client connected:', client.id);
-    console.log('Query:', client.handshake.query);
-    console.log('Headers:', client.handshake.headers);
-  }
-
-  handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
-  }
 }

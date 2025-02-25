@@ -6,11 +6,10 @@ import { ChatGateway } from '../chat.gateway';
 import { MemberRole } from '@prisma/client';
 import { UsersService } from '@app/users';
 import { CreateMessageDto } from '../../../../libs/database/src/dto/chat/create-message.dto';
-import { get } from 'http';
 
 @Injectable()
 export class MessagesService {
-  readonly MESSAGES_BATCH = 10;
+  readonly MESSAGES_BATCH = 50;
 
   constructor(
     private readonly prismaService: PrismaService,
@@ -22,8 +21,6 @@ export class MessagesService {
 
   async get(channelId: string, cursor?: string) {
     try {
-
-      console.log("Get service: channelId = ", channelId, "cursor = ", cursor)
       if (!channelId) {
         return new BadRequestException("Channel ID missing");
       }
@@ -172,7 +169,8 @@ export class MessagesService {
       },
     });
 
-    this.chatGateway.server.emit(`chat:${channelId}:messages`, message);
+    const eventKey = `chat:${channelId}:messages`;
+    this.chatGateway.server.emit(eventKey, message);
 
     return message;
   }
@@ -211,7 +209,8 @@ export class MessagesService {
       },
     });
 
-    this.chatGateway.server.emit(`chat:${channelId}:messages:update`, message);
+    const eventKey = `chat:${channelId}:messages:update`;
+    this.chatGateway.server.emit(eventKey, message);
 
     return message;
   }
@@ -242,7 +241,8 @@ export class MessagesService {
       },
     });
 
-    this.chatGateway.server.emit(`chat:${channelId}:messages:update`, message);
+    const eventKey = `chat:${channelId}:messages:update`;
+    this.chatGateway.server.emit(eventKey, message);
 
     return message;
   }

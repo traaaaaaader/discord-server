@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ChatGateway } from './chat.gateway';
-import { MessagesController } from './messages/messages.controller';
-import { MessagesService } from './messages/messages.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { UsersModule } from '@app/users';
 import { DirectMessagesController } from './direct-messages/direct-messages.controller';
 import { DirectMessagesService } from './direct-messages/direct-messages.service';
+import { MessagesService } from './messages/messages.service';
+import { MessagesController } from './messages/messages.controller';
 
 @Module({
   imports: [
@@ -35,6 +35,5 @@ import { DirectMessagesService } from './direct-messages/direct-messages.service
   ],
   controllers: [MessagesController, DirectMessagesController],
   providers: [ChatGateway, MessagesService, DirectMessagesService],
-  // exports: [ChatGateway],
 })
 export class ChatModule {}

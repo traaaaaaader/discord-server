@@ -4,7 +4,6 @@ export class CreateMessageDto {
 	@IsDefined()
 	@IsNotEmpty()
 	@IsString()
-	@MinLength(5)
 	content: string;
 
 	fileUrl?: string;

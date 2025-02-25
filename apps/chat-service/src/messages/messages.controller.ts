@@ -36,7 +36,6 @@ export class MessagesController {
       cursor?: string;
     },
   ) {
-    console.log("Get controller messages: data = ", data)
     const { cursor, channelId } = data;
 
     return await this.messagesService.get(
@@ -50,14 +49,13 @@ export class MessagesController {
     @Payload()
     data: {
       userId: string;
-      content: CreateMessageDto;
+      content: string;
       query: { messageId: string; channelId: string; serverId: string };
     },
   ) {
     const { userId, content, query } = data;
-
     return await this.messagesService.updateMessage(
-      content.content,
+      content,
       query.messageId,
       query.channelId,
       query.serverId,
