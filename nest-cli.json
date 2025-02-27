@@ -5,51 +5,51 @@
     "webpack": true
   },
   "monorepo": true,
-  "root": "apps/auth-service",
+  "root": "apps/gateway",
   "projects": {
-    "auth-service": {
+    "chat": {
       "type": "application",
-      "root": "apps/auth-service",
+      "root": "apps/chat",
       "entryFile": "main",
-      "sourceRoot": "apps/auth-service/src",
+      "sourceRoot": "apps/chat/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/auth-service/tsconfig.app.json"
+        "tsConfigPath": "apps/chat/tsconfig.app.json"
       }
     },
-    "servers-service": {
+    "core": {
       "type": "application",
-      "root": "apps/servers-service",
+      "root": "apps/core",
       "entryFile": "main",
-      "sourceRoot": "apps/servers-service/src",
+      "sourceRoot": "apps/core/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/servers-service/tsconfig.app.json"
+        "tsConfigPath": "apps/core/tsconfig.app.json"
       }
     },
-    "chat-service": {
+    "gateway": {
       "type": "application",
-      "root": "apps/chat-service",
+      "root": "apps/gateway",
       "entryFile": "main",
-      "sourceRoot": "apps/chat-service/src",
+      "sourceRoot": "apps/gateway/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/chat-service/tsconfig.app.json"
+        "tsConfigPath": "apps/gateway/tsconfig.app.json"
       }
     },
-    "gateway-service": {
+    "server": {
       "type": "application",
-      "root": "apps/gateway-service",
+      "root": "apps/server",
       "entryFile": "main",
-      "sourceRoot": "apps/gateway-service/src",
+      "sourceRoot": "apps/server/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/gateway-service/tsconfig.app.json"
+        "tsConfigPath": "apps/server/tsconfig.app.json"
       }
     },
-    "auth": {
+    "core-lib": {
       "type": "library",
-      "root": "libs/auth",
+      "root": "libs/core-lib",
       "entryFile": "index",
-      "sourceRoot": "libs/auth/src",
+      "sourceRoot": "libs/core-lib/src",
       "compilerOptions": {
-        "tsConfigPath": "libs/auth/tsconfig.lib.json"
+        "tsConfigPath": "libs/core-lib/tsconfig.lib.json"
       }
     },
     "files": {
@@ -59,15 +59,6 @@
       "sourceRoot": "libs/files/src",
       "compilerOptions": {
         "tsConfigPath": "libs/files/tsconfig.lib.json"
-      }
-    },
-    "users": {
-      "type": "library",
-      "root": "libs/users",
-      "entryFile": "index",
-      "sourceRoot": "libs/users/src",
-      "compilerOptions": {
-        "tsConfigPath": "libs/users/tsconfig.lib.json"
       }
     },
     "database": {

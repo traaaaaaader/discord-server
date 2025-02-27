@@ -9,13 +9,14 @@ datasource db {
 }
 
 model User {
-  id   String @id @default(uuid())
-  name String
+  id       String @id @default(uuid())
+  name     String
+  imageUrl String @db.Text
 
   members Member[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum MemberRole {
@@ -48,10 +49,10 @@ model Message {
   id      String @id @default(uuid())
   content String @db.Text
 
-  fileUrl  String? @db.Text
+  fileUrl String? @db.Text
 
   memberId String
-  member   Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   channelId String
 

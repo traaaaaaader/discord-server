@@ -24,17 +24,11 @@
       "@app/files/*": [
         "libs/files/src/*"
       ],
-      "@app/auth": [
-        "libs/auth/src"
+      "@app/core-lib": [
+        "libs/core-lib/src"
       ],
-      "@app/auth/*": [
-        "libs/auth/src/*"
-      ],
-      "@app/users": [
-        "libs/users/src"
-      ],
-      "@app/users/*": [
-        "libs/users/src/*"
+      "@app/core-lib/*": [
+        "libs/core-lib/src/*"
       ],
       "@app/database": [
         "libs/database/src"

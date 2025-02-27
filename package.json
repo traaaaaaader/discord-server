@@ -11,12 +11,12 @@
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     
     "start:all": "npm run prisma:migrate && npm run start:services",
-    "start:services": "concurrently \"npm run start:auth\" \"npm run start:chat\" \"npm run start:server\" \"npm run start:gateway\"",
+    "start:services": "concurrently \"npm run start:core\" \"npm run start:chat\" \"npm run start:server\" \"npm run start:gateway\"",
 
-    "start:auth": "npm run start auth-service",
-    "start:chat": "npm run start chat-service",
-    "start:server": "npm run start servers-service",
-    "start:gateway": "npm run start gateway-service",
+    "start:core": "npm run start core",
+    "start:chat": "npm run start chat",
+    "start:server": "npm run start server",
+    "start:gateway": "npm run start gateway",
 
     "prisma:gen": "npm run prisma:gen:user && npm run prisma:gen:chat && npm run prisma:gen:server",
     "prisma:migrate": "npm run prisma:migrate:user && npm run prisma:migrate:chat && npm run prisma:migrate:server",
@@ -120,9 +120,8 @@
       "<rootDir>/libs/"
     ],
     "moduleNameMapper": {
-      "^@app/auth(|/.*)$": "<rootDir>/libs/auth/src/$1",
+      "^@app/core-lib(|/.*)$": "<rootDir>/libs/core-lib/src/$1",
       "^@app/files(|/.*)$": "<rootDir>/libs/files/src/$1",
-      "^@app/users(|/.*)$": "<rootDir>/libs/users/src/$1",
       "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1"
     }
   }
