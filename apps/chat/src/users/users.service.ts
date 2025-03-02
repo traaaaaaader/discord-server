@@ -4,9 +4,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { UsersService as UsersLibService } from '@app/core-lib';
 import { EditUserDto } from '@app/database';
+
+import { User } from '@prisma/db-auth';
 
 @Injectable()
 export class UsersService {
@@ -23,13 +25,19 @@ export class UsersService {
     });
 
     if (!userFromChat) {
-      const user = await this.usersService.findOne({
+      const user: User = await this.usersService.findOne({
         id: userId,
       });
 
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      const { email, hashedPassword, ...userData } = user;
+
       await this.prismaService.user.create({
         data: {
-          ...user,
+          ...userData,
         },
       });
     }
@@ -54,6 +62,6 @@ export class UsersService {
         name,
         imageUrl,
       },
-    });;
+    });
   }
 }

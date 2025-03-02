@@ -20,7 +20,7 @@ import { CreateMessageDto } from '@app/database';
 @Controller('messages')
 export class MessagesController {
   constructor(
-    @Inject('CHAT_CLIENT') private readonly chatClient: ClientProxy,
+    @Inject(process.env.RABBIT_MQ_CHAT_CLIENT) private readonly chatClient: ClientProxy,
   ) {}
 
   @Post()

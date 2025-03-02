@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 
-import { PrismaModule } from '../../prisma/prisma.module';
+import { PrismaModule } from '../prisma/prisma.module';
 
 import { MessagesController } from './messages.controller';
 import { MessagesService } from './messages.service';
@@ -15,11 +15,11 @@ import { UsersModule } from '../users/users.module';
     UsersModule,
     ClientsModule.register([
       {
-        name: 'SERVER_CLIENT',
+        name: process.env.RABBIT_MQ_SERVER_CLIENT,
         transport: Transport.RMQ,
         options: {
-          urls: ['amqp://localhost:5672'],
-          queue: 'server_queue',
+          urls: [process.env.RABBIT_MQ_URI],
+          queue: process.env.RABBIT_MQ_SERVER_QUEUE,
           queueOptions: { durable: false },
         },
       },

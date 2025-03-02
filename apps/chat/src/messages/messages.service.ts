@@ -2,8 +2,8 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
-import { MemberRole } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
+import { MemberRole } from '@prisma/db-chat';
+import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { ChatGateway } from '../chat.gateway';
 
@@ -16,7 +16,7 @@ export class MessagesService {
 
   constructor(
     private readonly prismaService: PrismaService,
-    @Inject('SERVER_CLIENT') private readonly serverClient: ClientProxy,
+    @Inject(process.env.RABBIT_MQ_SERVER_CLIENT) private readonly serverClient: ClientProxy,
     private readonly usersService: UsersService,
     private readonly chatGateway: ChatGateway,
   ) {}

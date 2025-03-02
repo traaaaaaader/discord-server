@@ -5,7 +5,9 @@ import {
 } from '@nestjs/common';
 import { CreateUserDto, FindUserDto, EditUserDto } from '@app/database';
 
-import { PrismaService } from '../../prisma/prisma.service';
+import { User } from '@prisma/db-auth';
+
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class UsersService {
@@ -14,7 +16,7 @@ export class UsersService {
   async create(
     { email, hashedPassword, name, imageUrl }: CreateUserDto,
     type: 'auth' | 'oauth' = 'auth',
-  ) {
+  ): Promise<User> {
     const userByEmail = await this.prismaService.user.findUnique({
       where: { email },
     });
@@ -38,7 +40,7 @@ export class UsersService {
     return user;
   }
 
-  async edit(userId: string, body: EditUserDto) {
+  async edit(userId: string, body: EditUserDto): Promise<User> {
     return await this.prismaService.user.update({
       where: {
         id: userId,
@@ -50,7 +52,7 @@ export class UsersService {
     });
   }
 
-  async findOne({ id, email }: FindUserDto) {
+  async findOne({ id, email }: FindUserDto): Promise<User> {
     if (!id && !email) {
       throw new BadRequestException();
     }

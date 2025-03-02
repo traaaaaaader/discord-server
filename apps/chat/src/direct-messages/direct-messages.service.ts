@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { ChatGateway } from '../chat.gateway';
 
-import { MemberRole } from '@prisma/client';
+import { MemberRole } from '@prisma/db-chat';
 import { UsersService } from '../users/users.service';
 import { CreateMessageDto } from '@app/database';
 

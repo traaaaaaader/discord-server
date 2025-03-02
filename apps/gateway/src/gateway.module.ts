@@ -21,29 +21,29 @@ import {
     FilesModule,
     ClientsModule.register([
       {
-        name: 'CORE_CLIENT',
+        name: process.env.RABBIT_MQ_CHAT_CLIENT,
         transport: Transport.RMQ,
         options: {
-          urls: ['amqp://localhost:5672'],
-          queue: 'core_queue',
+          urls: [process.env.RABBIT_MQ_URI],
+          queue: process.env.RABBIT_MQ_CHAT_QUEUE,
           queueOptions: { durable: false },
         },
       },
       {
-        name: 'CHAT_CLIENT',
+        name: process.env.RABBIT_MQ_CORE_CLIENT,
         transport: Transport.RMQ,
         options: {
-          urls: ['amqp://localhost:5672'],
-          queue: 'chat_queue',
+          urls: [process.env.RABBIT_MQ_URI],
+          queue: process.env.RABBIT_MQ_CORE_QUEUE,
           queueOptions: { durable: false },
         },
       },
       {
-        name: 'SERVER_CLIENT',
+        name: process.env.RABBIT_MQ_SERVER_CLIENT,
         transport: Transport.RMQ,
         options: {
-          urls: ['amqp://localhost:5672'],
-          queue: 'server_queue',
+          urls: [process.env.RABBIT_MQ_URI],
+          queue: process.env.RABBIT_MQ_SERVER_QUEUE,
           queueOptions: { durable: false },
         },
       },

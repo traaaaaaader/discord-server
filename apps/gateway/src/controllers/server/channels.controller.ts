@@ -20,7 +20,7 @@ import { CreateChannelDto, UpdateChannelDto } from '@app/database';
 @Controller('channels')
 export class ChannelsController {
   constructor(
-    @Inject('SERVER_CLIENT') private readonly serverClient: ClientProxy,
+    @Inject(process.env.RABBIT_MQ_SERVER_CLIENT) private readonly serverClient: ClientProxy,
   ) {}
 
   @Get(':channelId')

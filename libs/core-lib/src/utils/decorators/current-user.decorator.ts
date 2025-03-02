@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { User } from '@prisma/db-auth';
 import { Request } from 'express';
 
 export const CurrentUser = createParamDecorator(

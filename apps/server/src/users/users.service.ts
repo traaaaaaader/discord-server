@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { UsersService as UsersLibService } from '@app/core-lib';
 import { EditUserDto } from '@app/database';
 

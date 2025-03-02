@@ -10,7 +10,7 @@ import { JwtAccessGuard } from 'libs/core-lib/src';
 @UseGuards(JwtAccessGuard)
 @WebSocketGateway({
   cors: {
-    origin: 'http://localhost:1420',
+    origin: process.env.CLIENT_URL,
   },
   path: "/socket/io",
   addTrailingSlash: false,

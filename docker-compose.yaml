@@ -16,23 +16,24 @@ services:
     image: rabbitmq:4.0-management
     hostname: rabbitmq
     restart: always
-    # environment:
-    #   - RABBITMQ_DEFAULT_USER=admin
-    #   - RABBITMQ_DEFAULT_PASS=admin
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
     ports:
       - 15672:15672
       - 5672:5672
   minio:
     image: docker.io/bitnami/minio:2022
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: supersecret
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: adminadmin
     restart: always
     ports:
       - '9000:9000'
       - '9001:9001'
     volumes:
       - 'minio_data:/data'
+      - ./minio-init.sh:/docker-entrypoint-init.d/minio-init.sh
 
 volumes:
   minio_data:

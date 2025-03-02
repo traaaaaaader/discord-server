@@ -9,26 +9,20 @@
     "start": "nest start",
     "build": "nest build",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
-    
     "start:all": "npm run prisma:migrate && npm run start:services",
     "start:services": "concurrently \"npm run start:core\" \"npm run start:chat\" \"npm run start:server\" \"npm run start:gateway\"",
-
     "start:core": "npm run start core",
     "start:chat": "npm run start chat",
     "start:server": "npm run start server",
     "start:gateway": "npm run start gateway",
-
     "prisma:gen": "npm run prisma:gen:user && npm run prisma:gen:chat && npm run prisma:gen:server",
     "prisma:migrate": "npm run prisma:migrate:user && npm run prisma:migrate:chat && npm run prisma:migrate:server",
-
     "prisma:gen:user": "prisma generate --schema=./prisma/user/schema.prisma",
     "prisma:gen:chat": "prisma generate --schema=./prisma/chat/schema.prisma",
     "prisma:gen:server": "prisma generate --schema=./prisma/server/schema.prisma",
-
     "prisma:migrate:user": "prisma migrate dev --schema=./prisma/user/schema.prisma",
     "prisma:migrate:chat": "prisma migrate dev --schema=./prisma/chat/schema.prisma",
     "prisma:migrate:server": "prisma migrate dev --schema=./prisma/server/schema.prisma",
-
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
@@ -40,6 +34,8 @@
     "test:e2e": "jest --config ./apps/discord-server/test/jest-e2e.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.758.0",
+    "@aws-sdk/s3-request-presigner": "^3.758.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.3.0",
     "@nestjs/core": "^10.0.0",

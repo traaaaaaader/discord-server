@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { hash, verify } from 'argon2';
 
-import { User } from '@prisma/client';
+import { User } from '@prisma/db-auth';
 import { CreateUserDto, RegisterDto, LoginUserDto } from '@app/database';
 
 import { UsersService } from '../users/users.service';

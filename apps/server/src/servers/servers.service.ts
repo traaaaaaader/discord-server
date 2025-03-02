@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 import { MemberRole } from '@prisma/db-server';
 import { CreateServerDto } from '@app/database';

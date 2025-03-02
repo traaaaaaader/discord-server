@@ -5,10 +5,12 @@ import {
 	Post,
   Delete,
   Param,
+  UseInterceptors,
 } from '@nestjs/common';
 
 import { FileUpload } from '../decorators/file-upload.decorator';
 import { FilesService } from '@app/files';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('files')
 export class FilesController {
@@ -17,7 +19,7 @@ export class FilesController {
   ) {}
 
   @Post()
-  @FileUpload()
+  @UseInterceptors(FileInterceptor('file'))
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('The file is required');

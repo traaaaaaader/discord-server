@@ -9,9 +9,9 @@ import { EditUserDto } from '@app/database';
 @Controller('users')
 export class UsersController {
   constructor(
-    @Inject('CORE_CLIENT') private readonly coreClient: ClientProxy,
-    @Inject('CHAT_CLIENT') private readonly chatClient: ClientProxy,
-    @Inject('SERVER_CLIENT') private readonly serverClient: ClientProxy,
+    @Inject(process.env.RABBIT_MQ_CORE_CLIENT) private readonly coreClient: ClientProxy,
+    @Inject(process.env.RABBIT_MQ_CHAT_CLIENT) private readonly chatClient: ClientProxy,
+    @Inject(process.env.RABBIT_MQ_SERVER_CLIENT) private readonly serverClient: ClientProxy,
   ) {}
 
   @Get('get')

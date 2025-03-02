@@ -22,7 +22,7 @@ import { RegisterDto, CreateUserDto, LoginUserDto } from '@app/database';
 @Controller('auth')
 export class AuthController {
   constructor(
-    @Inject('CORE_CLIENT') private readonly coreClient: ClientProxy,
+    @Inject(process.env.RABBIT_MQ_CORE_CLIENT) private readonly coreClient: ClientProxy,
   ) {}
 
   @Post('register')

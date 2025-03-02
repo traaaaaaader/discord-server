@@ -19,7 +19,7 @@ import { UpdateMemberDto } from '@app/database';
 @Controller('members')
 export class MembersController {
   constructor(
-    @Inject('SERVER_CLIENT') private readonly serverClient: ClientProxy,
+    @Inject(process.env.RABBIT_MQ_SERVER_CLIENT) private readonly serverClient: ClientProxy,
   ) {}
 
   @Get()
