@@ -1,0 +1,22 @@
+# Используем базовый образ Node.js
+FROM node:18-alpine
+
+# Устанавливаем зависимости для Prisma и системные зависимости
+RUN apk add --no-cache openssl
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем package.json и package-lock.json
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Устанавливаем зависимости
+RUN npm install
+RUN npm install prisma --save-dev
+
+# Копируем все файлы проекта
+COPY . .
+
+# Команда для выполнения миграций (будет переопределена в docker-compose при необходимости)
+CMD ["npm", "run", "prisma:migrate"]

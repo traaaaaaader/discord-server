@@ -122,7 +122,7 @@ export class FilesService {
   async getFileUrl(key: string): Promise<string> {
     const useSSL = this.configService.get('MINIO_USE_SSL') === 'true';
     const protocol = useSSL ? 'https' : 'http';
-    const endpoint = this.configService.get('MINIO_ENDPOINT');
+    const endpoint = 'localhost'; //this.configService.get('MINIO_ENDPOINT');
     const port = this.configService.get('MINIO_PORT');
     return `${protocol}://${endpoint}:${port}/${this.bucketName}/${key}`;
   }
