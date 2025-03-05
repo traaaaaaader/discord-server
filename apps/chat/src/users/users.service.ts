@@ -6,7 +6,7 @@ import {
 
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService as UsersLibService } from '@app/core-lib';
-import { EditUserDto } from '@app/database';
+import { EditUserDto, FindUserDto } from '@app/database';
 
 import { User } from '@prisma/db-auth';
 
@@ -17,16 +17,22 @@ export class UsersService {
     private readonly usersService: UsersLibService,
   ) {}
 
-  async create(userId: string) {
-    const userFromChat = await this.prismaService.user.findFirst({
+  async create({ id, name }: FindUserDto) {
+    if (!id && !name) {
+      throw new BadRequestException('ID and name missing.');
+    }
+
+    const userFromChat = await this.prismaService.user.findUnique({
       where: {
-        id: userId,
+        id,
+        name,
       },
     });
 
     if (!userFromChat) {
       const user: User = await this.usersService.findOne({
-        id: userId,
+        id,
+        name,
       });
 
       if (!user) {
@@ -35,12 +41,20 @@ export class UsersService {
 
       const { email, hashedPassword, ...userData } = user;
 
-      await this.prismaService.user.create({
+      return await this.prismaService.user.create({
         data: {
           ...userData,
+          conversationsInitiated: {
+            create: [],
+          },
+          conversationsReceived: {
+            create: [],
+          },
         },
       });
     }
+
+    return userFromChat;
   }
 
   async edit(userId: string, body: EditUserDto) {

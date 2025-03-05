@@ -5,11 +5,13 @@ import { AuthModule } from '@app/core-lib';
 import { FilesModule } from '@app/files';
 
 import {
-  DirectMessagesController,
+  ConversationMessagesController,
+  ConversationsController,
   MessagesController,
   AuthController,
   UsersController,
   ChannelsController,
+  InviteController,
   MembersController,
   ServersController,
   FilesController,
@@ -50,11 +52,13 @@ import {
     ]),
   ],
   controllers: [
-    DirectMessagesController,
+    ConversationMessagesController,
+    ConversationsController,
     MessagesController,
     AuthController,
     UsersController,
     ChannelsController,
+    InviteController,
     MembersController,
     ServersController,
     FilesController,

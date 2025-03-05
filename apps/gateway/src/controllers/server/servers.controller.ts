@@ -83,17 +83,6 @@ export class ServersController {
     return result;
   }
 
-  @Patch(':serverId/invite-code')
-  async invite(
-    @Param('serverId') serverId: string,
-    @CurrentUser('id') userId: string,
-  ) {
-    const result = await firstValueFrom(
-      this.serverClient.send({ cmd: 'invite-server' }, { serverId, userId }),
-    );
-    return result;
-  }
-
   @Patch(':serverId/leave')
   async leave(
     @Param('serverId') serverId: string,

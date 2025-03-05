@@ -36,11 +36,6 @@ export class ServersController {
     return await this.serversService.delete(data.serverId, data.userId);
   }
 
-  @MessagePattern({ cmd: 'invite-server' })
-  async invite(@Payload() data: { serverId: string; userId: string }) {
-    return this.serversService.invite(data.serverId, data.userId);
-  }
-
   @MessagePattern({ cmd: 'leave-server' })
   async leave(@Payload() data: { serverId: string; userId: string }) {
     return await this.serversService.leave(data.serverId, data.userId);

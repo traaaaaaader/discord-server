@@ -20,7 +20,8 @@ import { CreateChannelDto, UpdateChannelDto } from '@app/database';
 @Controller('channels')
 export class ChannelsController {
   constructor(
-    @Inject(process.env.RABBIT_MQ_SERVER_CLIENT) private readonly serverClient: ClientProxy,
+    @Inject(process.env.RABBIT_MQ_SERVER_CLIENT)
+    private readonly serverClient: ClientProxy,
   ) {}
 
   @Get(':channelId')
@@ -83,7 +84,7 @@ export class ChannelsController {
 
   @Delete(':channelId')
   async delete(
-    @Query() query,
+    @Query() query: { serverId: string },
     @Param('channelId') channelId: string,
     @CurrentUser('id') userId: string,
   ) {

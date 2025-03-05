@@ -52,15 +52,16 @@ export class UsersService {
     });
   }
 
-  async findOne({ id, email }: FindUserDto): Promise<User> {
-    if (!id && !email) {
-      throw new BadRequestException();
+  async findOne({ id, email, name }: FindUserDto): Promise<User> {
+    if (!id && !email && !name) {
+      throw new BadRequestException('ID, email and name missing.');
     }
 
-    const user = await this.prismaService.user.findFirst({
+    const user = await this.prismaService.user.findUnique({
       where: {
         id,
         email,
+        name,
       },
     });
 

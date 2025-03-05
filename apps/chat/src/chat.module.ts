@@ -2,10 +2,16 @@ import { Module } from '@nestjs/common';
 
 import { MessagesModule } from './messages/messages.module';
 
-import { DirectMessagesModule } from './direct-messages/direct-messages.module';
+import { ConversationsModule } from './conversations/conversations.module';
 import { UsersModule } from './users/users.module';
+import { ConversationMessagesModule } from './conversationMessages/conversationMessages.module';
 
 @Module({
-  imports: [DirectMessagesModule, MessagesModule, UsersModule],
+  imports: [
+    ConversationMessagesModule,
+    ConversationsModule,
+    MessagesModule,
+    UsersModule,
+  ],
 })
 export class ChatModule {}

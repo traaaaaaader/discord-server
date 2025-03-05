@@ -7,7 +7,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { ChatGateway } from '../chat.gateway';
 
-
 import { CreateMessageDto } from '@app/database';
 
 @Injectable()
@@ -16,7 +15,8 @@ export class MessagesService {
 
   constructor(
     private readonly prismaService: PrismaService,
-    @Inject(process.env.RABBIT_MQ_SERVER_CLIENT) private readonly serverClient: ClientProxy,
+    @Inject(process.env.RABBIT_MQ_SERVER_CLIENT)
+    private readonly serverClient: ClientProxy,
     private readonly usersService: UsersService,
     private readonly chatGateway: ChatGateway,
   ) {}
@@ -116,7 +116,7 @@ export class MessagesService {
       throw new BadRequestException('Member not found');
     }
 
-    await this.usersService.create(userId);
+    await this.usersService.create({ id: userId });
 
     const chatMember = await this.prismaService.member.findFirst({
       where: {
@@ -258,7 +258,7 @@ export class MessagesService {
 
     const member = server.members.find((member) => member.userId === userId);
 
-    await this.usersService.create(userId);
+    await this.usersService.create({ id: userId });
 
     if (!member) {
       throw new BadRequestException('Member not found');

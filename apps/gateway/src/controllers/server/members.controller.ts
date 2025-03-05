@@ -19,7 +19,8 @@ import { UpdateMemberDto } from '@app/database';
 @Controller('members')
 export class MembersController {
   constructor(
-    @Inject(process.env.RABBIT_MQ_SERVER_CLIENT) private readonly serverClient: ClientProxy,
+    @Inject(process.env.RABBIT_MQ_SERVER_CLIENT)
+    private readonly serverClient: ClientProxy,
   ) {}
 
   @Get()
@@ -61,7 +62,7 @@ export class MembersController {
 
   @Patch(':memberId')
   async update(
-    @Query() query,
+    @Query() query: { serverId: string },
     @Param('memberId') memberId: string,
     @CurrentUser('id') userId: string,
     @Body() updateMemberDto: UpdateMemberDto,
@@ -70,7 +71,7 @@ export class MembersController {
 
     const result = await firstValueFrom(
       this.serverClient.send(
-        { cmd: 'delete-member' },
+        { cmd: 'update-member' },
         { userId, serverId, memberId, updateMemberDto },
       ),
     );

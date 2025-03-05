@@ -80,26 +80,6 @@ export class ServersService {
     });
   }
 
-  async invite(serverId: string, userId: string) {
-    if (!userId) {
-      throw new UnauthorizedException();
-    }
-
-    if (!serverId) {
-      throw new BadRequestException();
-    }
-
-    return await this.prismaService.server.update({
-      where: {
-        id: serverId,
-        userId: userId,
-      },
-      data: {
-        inviteCode: uuidv4(),
-      },
-    });
-  }
-
   async leave(serverId: string, userId: string) {
     if (!userId) {
       throw new UnauthorizedException();

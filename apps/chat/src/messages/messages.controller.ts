@@ -10,7 +10,7 @@ export class MessagesController {
     private readonly messagesService: MessagesService,
   ) {}
 
-  @EventPattern({ cmd: 'send-message' })
+  @EventPattern({ cmd: 'create-message' })
   async create(
     @Payload()
     data: {
