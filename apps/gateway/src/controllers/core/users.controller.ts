@@ -16,6 +16,7 @@ export class UsersController {
 
   @Get('get')
   async get(@CurrentUser('id') userId: string) {
+    console.log("userID = ", userId)
     const result = await firstValueFrom(
       this.coreClient.send({ cmd: 'get-user' }, userId),
     );

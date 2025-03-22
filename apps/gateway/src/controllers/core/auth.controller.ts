@@ -104,6 +104,6 @@ export class AuthController {
     session.accessToken = result.accessToken;
     session.refreshToken = result.refreshToken;
 
-    res.redirect('http://localhost:1420');
+    res.redirect('http://tauri.localhost');
   }
 }

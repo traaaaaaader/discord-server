@@ -71,3 +71,34 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](LICENSE).
+
+
+## Мониторинг в Grafana
+
+Для просмотра метрик используются следующие дашборды:
+
+- **Node Exporter**  
+  ID дашборда: `11159`  
+  Шаблон: Node Exporter Full
+
+- **RabbitMQ**  
+  ID дашборда: `10991`  
+  Шаблон: RabbitMQ Monitoring
+
+- **PostgreSQL**  
+  ID дашборда: `9628`  
+  Шаблон: PostgreSQL Database
+
+- **Redis**  
+  ID дашборда: `11835`  
+  Шаблон: Redis Dashboard
+
+- **MinIO**  
+  Конфигурация дашборда находится в файле: `grafana/dashboards/minio-dashboard.json`
+
+Для импорта:
+1. Перейдите в Grafana → Create → Import
+2. Введите ID дашборда или загрузите JSON-файл для MinIO
+3. Выберите соответствующий источник данных
+
+Требуемые данные источников должны быть предварительно настроены в Grafana.

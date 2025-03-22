@@ -1,6 +1,21 @@
 # Stage 1: Build
 FROM node:18-alpine AS builder
 
+# Устанавливаем зависимости, необходимые для работы mkcert
+# RUN apk add --no-cache nss-tools wget
+
+# Скачиваем статически скомпилированный бинарник mkcert
+# RUN wget -O /usr/local/bin/mkcert "https://dl.filippo.io/mkcert/latest?for=linux/amd64" \
+#     && chmod +x /usr/local/bin/mkcert
+
+# Создаем директорию для сертификатов
+# RUN mkdir -p /app/secrets
+
+# Генерируем сертификаты
+# WORKDIR /app/secrets
+# RUN mkcert -install && mkcert -key-file localhost-key.pem -cert-file localhost.pem localhost
+
+
 WORKDIR /app
 
 # Copy dependency files
@@ -23,6 +38,16 @@ RUN npm run build gateway
 FROM node:18-alpine
 
 WORKDIR /app
+
+# RUN apk add --no-cache nss-tools \
+#     && wget -O /usr/local/bin/mkcert "https://dl.filippo.io/mkcert/latest?for=linux/amd64" \
+#     && chmod +x /usr/local/bin/mkcert \
+#     && mkcert -install
+
+# Копируем сертификаты из builder
+# COPY --from=builder /app/secrets/localhost.pem /app/secrets/localhost.pem
+# COPY --from=builder /app/secrets/localhost-key.pem /app/secrets/localhost-key.pem
+
 
 # Copy production dependencies
 COPY package*.json ./

@@ -14,3 +14,6 @@ export * from './strategies/google.strategy';
 export * from './strategies/jwt-access.strategy';
 export * from './strategies/jwt-refresh.stretegy';
 export * from './strategies/local.strategy';
+
+export * from './prisma/prisma.module'
+export * from './prisma/prisma.service'

@@ -8,7 +8,6 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 
-import { FileUpload } from '../decorators/file-upload.decorator';
 import { FilesService } from '@app/files';
 import { FileInterceptor } from '@nestjs/platform-express';
 

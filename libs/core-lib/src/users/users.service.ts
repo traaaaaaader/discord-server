@@ -54,7 +54,7 @@ export class UsersService {
 
   async findOne({ id, email, name }: FindUserDto): Promise<User> {
     if (!id && !email && !name) {
-      throw new BadRequestException('ID, email and name missing.');
+      throw new BadRequestException('ID, email or name missing.');
     }
 
     const user = await this.prismaService.user.findUnique({

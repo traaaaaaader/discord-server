@@ -7,11 +7,11 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma/ ./prisma/
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (включая curl для сборки)
+RUN apk add --no-cache curl && \
+    npm ci && \
+    npm run prisma:gen
 
-# Generate Prisma client for core
-RUN npm run prisma:gen
 
 # Copy source code
 COPY . .
@@ -23,6 +23,9 @@ RUN npm run build core
 FROM node:18-alpine
 
 WORKDIR /app
+
+# Установка curl для healthcheck'ов
+RUN apk add --no-cache curl
 
 # Copy production dependencies
 COPY package*.json ./

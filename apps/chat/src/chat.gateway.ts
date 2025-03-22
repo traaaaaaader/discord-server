@@ -10,7 +10,7 @@ import { JwtAccessGuard } from 'libs/core-lib/src';
 @UseGuards(JwtAccessGuard)
 @WebSocketGateway({
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: 'http://tauri.localhost',
   },
   path: "/socket/io",
   addTrailingSlash: false,

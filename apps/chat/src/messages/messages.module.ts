@@ -8,20 +8,27 @@ import { MessagesService } from './messages.service';
 import { ChatGateway } from '../chat.gateway';
 
 import { UsersModule } from '../users/users.module';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
     PrismaModule,
     UsersModule,
-    ClientsModule.register([
+    ClientsModule.registerAsync([
       {
         name: process.env.RABBIT_MQ_SERVER_CLIENT,
-        transport: Transport.RMQ,
-        options: {
-          urls: [process.env.RABBIT_MQ_URI],
-          queue: process.env.RABBIT_MQ_SERVER_QUEUE,
-          queueOptions: { durable: false },
-        },
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          name: config.getOrThrow<string>('RABBIT_MQ_SERVER_CLIENT'),
+          transport: Transport.RMQ,
+          options: {
+            urls: [config.getOrThrow<string>('RABBIT_MQ_URI')],
+            queue: config.getOrThrow<string>('RABBIT_MQ_SERVER_QUEUE'),
+            queueOptions: {
+              durable: config.get('RABBIT_MQ_QUEUE_DURABLE', false),
+            },
+          },
+        }),
       },
     ]),
   ],
