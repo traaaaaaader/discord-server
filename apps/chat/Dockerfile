@@ -3,19 +3,38 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy dependency files
+# Устанавливаем системные зависимости для mediasoup и сборки
+RUN apk add --no-cache \
+    curl \
+    python3 \
+    pkgconfig \
+    make \
+    g++ \
+    libc6-compat \
+    bash \
+    libtool \
+    autoconf \
+    automake \
+    py3-pip \
+    linux-headers \
+    cmake \
+    ninja
+
+# Копируем зависимости
 COPY package*.json ./
 COPY prisma/ ./prisma/
 
-# Install dependencies (включая curl для сборки)
-RUN apk add --no-cache curl && \
-    npm ci && \
+# Устанавливаем Node.js зависимости и генерируем Prisma клиент
+RUN npm ci && \
     npm run prisma:gen
 
-# Copy source code
+# Собираем mediasoup worker с явным указанием архитектуры
+RUN npm rebuild mediasoup --build-from-source
+
+# Копируем исходный код
 COPY . .
 
-# Build specific service
+# Собираем приложение
 RUN npm run build chat
 
 # Stage 2: Production
@@ -23,25 +42,28 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Установка curl для healthcheck'ов
-RUN apk add --no-cache curl
+# Устанавливаем рантайм-зависимости для mediasoup
+RUN apk add --no-cache \
+    libstdc++ \
+    libc6-compat \
+    bash
 
-# Copy production dependencies
+# Копируем package.json и устанавливаем production зависимости
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
-# Copy built files and prisma schema
+# Копируем собранные файлы и Prisma схемы
 COPY --from=builder /app/dist/apps/chat ./dist
 COPY --from=builder /app/prisma/chat/schema.prisma ./prisma/chat/
 COPY --from=builder /app/prisma/user/schema.prisma ./prisma/user/
 COPY --from=builder /app/prisma/server/schema.prisma ./prisma/server/
 
-# Copy Prisma client
+# Копируем сгенерированные Prisma клиенты и медиасуп
 COPY --from=builder /app/node_modules/.prisma/client ./node_modules/.prisma/client
 COPY --from=builder /app/node_modules/@prisma/db-chat ./node_modules/@prisma/db-chat
 COPY --from=builder /app/node_modules/@prisma/db-auth ./node_modules/@prisma/db-auth
 COPY --from=builder /app/node_modules/@prisma/db-server ./node_modules/@prisma/db-server
+COPY --from=builder /app/node_modules/mediasoup/worker ./node_modules/mediasoup/worker
 
-
-# Migration and startup
-CMD ["sh", "-c", "node dist/main.js"]
+# Запускаем приложение
+CMD ["node", "dist/main.js"]

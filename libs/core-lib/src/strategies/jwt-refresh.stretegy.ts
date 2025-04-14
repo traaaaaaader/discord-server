@@ -14,25 +14,25 @@ export class JwtRefreshStrategy extends PassportStrategy(
   'jwt-refresh',
 ) {
   constructor(
-		private readonly configService: ConfigService,
+    private readonly configService: ConfigService,
     private readonly usersService: UsersService,
   ) {
     super({
-      jwtFromRequest: (req: Request & {session}) => {
-        return req.session.accessToken;
+      jwtFromRequest: (req: Request) => {
+        return req.cookies['refreshToken'];
       },
       ignoreExpiration: false,
-      secretOrKey: configService.getOrThrow("JWT_REFRESH_SECRET"),
+      secretOrKey: configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
     });
   }
 
   async validate({ userId }: JwtPayload) {
     const user = await this.usersService.findOne({ id: userId });
 
-		if(!user) {
-			throw new UnauthorizedException();
-		}
+    if (!user) {
+      throw new UnauthorizedException();
+    }
 
-		return user;
+    return user;
   }
 }

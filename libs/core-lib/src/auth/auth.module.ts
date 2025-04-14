@@ -15,7 +15,10 @@ import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+    }),
     UsersModule,
     JwtModule.register({}),
   ],

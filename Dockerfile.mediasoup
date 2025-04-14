@@ -1,0 +1,5 @@
+FROM node:18-alpine
+RUN apk add --no-cache python3 make g++
+RUN npm install -g mediasoup-demo@3.11.5
+EXPOSE 4443 40000-49999/udp
+CMD ["mediasoup-demo"]

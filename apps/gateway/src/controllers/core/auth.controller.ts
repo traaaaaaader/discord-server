@@ -18,71 +18,73 @@ import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser, GoogleGuard } from '@app/core-lib';
 
 import { RegisterDto, CreateUserDto, LoginUserDto } from '@app/database';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
 export class AuthController {
   constructor(
-    @Inject(process.env.RABBIT_MQ_CORE_CLIENT) private readonly coreClient: ClientProxy,
+    @Inject(process.env.RABBIT_MQ_CORE_CLIENT)
+    private readonly coreClient: ClientProxy,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post('register')
   async register(
     @Body() body: RegisterDto,
-    @Session() session: Record<string, any>,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await firstValueFrom(
       this.coreClient.send({ cmd: 'register' }, body),
     );
 
-    session.accessToken = result.accessToken;
-    session.refreshToken = result.refreshToken;
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
 
-    return res.json({ user: result.user });
+    return res.json({ accessToken: result.accessToken });
   }
 
   @UseGuards(AuthGuard('local'))
   @Post('login')
   async login(
     @Body() body: LoginUserDto,
-    @Session() session: Record<string, any>,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await firstValueFrom(
       this.coreClient.send({ cmd: 'login' }, body),
     );
-    session.accessToken = result.accessToken;
-    session.refreshToken = result.refreshToken;
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
 
-    return res.json({ user: result.user });
+    return res.json({ accessToken: result.accessToken });
   }
 
   @UseGuards(AuthGuard('jwt-refresh'))
   @Post('refresh')
   async refresh(
     @CurrentUser('id') userId: string,
-    @Session() session: Record<string, any>,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await firstValueFrom(
       this.coreClient.send({ cmd: 'refresh' }, userId),
     );
-    session.accessToken = result.accessToken;
-    session.refreshToken = result.refreshToken;
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
 
-    return res.json({ user: result.user });
+    return res.json({ accessToken: result.accessToken });
   }
 
   @Post('logout')
-  async logout(
-    @Session() session: Record<string, any>,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    session.destroy((err) => {
-      if (err) {
-        console.error('Error destroying session:', err);
-      }
-    });
+  async logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('refreshToken');
     res.sendStatus(200);
   }
 
@@ -101,9 +103,12 @@ export class AuthController {
       this.coreClient.send({ cmd: 'google/callback' }, req.user),
     );
 
-    session.accessToken = result.accessToken;
-    session.refreshToken = result.refreshToken;
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
 
-    res.redirect('http://tauri.localhost');
+    res.redirect(this.configService.getOrThrow<string>('CLIENT_URL'));
   }
 }

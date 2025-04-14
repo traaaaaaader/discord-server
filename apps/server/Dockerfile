@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma/ ./prisma/
 
-# Install dependencies (включая curl для сборки)
+# Install dependencies and generate Prisma client
 RUN apk add --no-cache curl && \
     npm ci && \
     npm run prisma:gen
@@ -23,14 +23,14 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Установка curl для healthcheck'ов
+# Install curl for healthchecks
 RUN apk add --no-cache curl
 
 # Copy production dependencies
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copy built files and prisma schema
+# Copy built files and Prisma schema
 COPY --from=builder /app/dist/apps/server ./dist
 COPY --from=builder /app/prisma/chat/schema.prisma ./prisma/chat/
 COPY --from=builder /app/prisma/user/schema.prisma ./prisma/user/
@@ -42,7 +42,5 @@ COPY --from=builder /app/node_modules/@prisma/db-chat ./node_modules/@prisma/db-
 COPY --from=builder /app/node_modules/@prisma/db-auth ./node_modules/@prisma/db-auth
 COPY --from=builder /app/node_modules/@prisma/db-server ./node_modules/@prisma/db-server
 
-
 # Migration and startup
-CMD ["sh", "-c", "node dist/main.js"]
-#npm run prisma:migrate:deploy && 
+CMD ["node", "dist/main.js"]
