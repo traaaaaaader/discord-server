@@ -219,27 +219,6 @@ services:
     depends_on:
       - prometheus
 
-  # janus_server:
-  #   build:
-  #     context: .
-  #     dockerfile: ./Dockerfile.janus
-  #   command: ["-S", "stun.l.google.com:19302"] #STUN IP
-  #   ports:
-  #     - "8088:8088"
-  #     - "8089:8089"
-  #     - "7088:7088"
-  #     - "7089:7089"
-  #     - "8188:8188"
-  #     - "8889:8889"
-  #     - "8000:8000"
-  #     - "10000-10300:10000-10300/udp"
-  #   ulimits:
-  #     nproc: 65535
-  #     nofile:
-  #       soft: 100000
-  #       hard: 100000
-  #   restart: unless-stopped
-
 volumes:
   minio-storage:
   minio-config:

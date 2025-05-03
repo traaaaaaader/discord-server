@@ -1,69 +1,62 @@
-# Stage 1: Build
+# Stage 1: Builder
 FROM node:18-alpine AS builder
 
-# Устанавливаем зависимости, необходимые для работы mkcert
-# RUN apk add --no-cache nss-tools wget
-
-# Скачиваем статически скомпилированный бинарник mkcert
-# RUN wget -O /usr/local/bin/mkcert "https://dl.filippo.io/mkcert/latest?for=linux/amd64" \
-#     && chmod +x /usr/local/bin/mkcert
-
-# Создаем директорию для сертификатов
-# RUN mkdir -p /app/secrets
-
-# Генерируем сертификаты
-# WORKDIR /app/secrets
-# RUN mkcert -install && mkcert -key-file localhost-key.pem -cert-file localhost.pem localhost
-
+# Устанавливаем системные зависимости
+RUN apk add --no-cache \
+    curl \
+    python3 \
+    pkgconfig \
+    make \
+    g++ \
+    libc6-compat \
+    bash \
+    libtool \
+    autoconf \
+    automake \
+    py3-pip \
+    linux-headers \
+    cmake \
+    ninja
 
 WORKDIR /app
 
-# Copy dependency files
+# Копируем файлы зависимостей и Prisma
 COPY package*.json ./
 COPY prisma/ ./prisma/
 
-# Install dependencies
-RUN npm ci
+# Устанавливаем зависимости и генерируем Prisma Client
+RUN npm ci && npm run prisma:gen
 
-# Generate Prisma client for chat
-RUN npm run prisma:gen
-
-# Copy source code
+# Копируем остальной исходный код
 COPY . .
 
-# Build specific service
+# Собираем приложение для gateway
 RUN npm run build gateway
+
 
 # Stage 2: Production
 FROM node:18-alpine
 
 WORKDIR /app
 
-# RUN apk add --no-cache nss-tools \
-#     && wget -O /usr/local/bin/mkcert "https://dl.filippo.io/mkcert/latest?for=linux/amd64" \
-#     && chmod +x /usr/local/bin/mkcert \
-#     && mkcert -install
+# Устанавливаем curl для healthcheck
+RUN apk add --no-cache curl
 
-# Копируем сертификаты из builder
-# COPY --from=builder /app/secrets/localhost.pem /app/secrets/localhost.pem
-# COPY --from=builder /app/secrets/localhost-key.pem /app/secrets/localhost-key.pem
-
-
-# Copy production dependencies
+# Копируем package.json и устанавливаем production-зависимости
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
-# Copy built files and prisma schema
+# Копируем собранные файлы и Prisma схемы
 COPY --from=builder /app/dist/apps/gateway ./dist
 COPY --from=builder /app/prisma/chat/schema.prisma ./prisma/chat/
 COPY --from=builder /app/prisma/user/schema.prisma ./prisma/user/
 COPY --from=builder /app/prisma/server/schema.prisma ./prisma/server/
 
-# Copy Prisma client
+# Копируем сгенерированные Prisma клиенты
 COPY --from=builder /app/node_modules/.prisma/client ./node_modules/.prisma/client
 COPY --from=builder /app/node_modules/@prisma/db-chat ./node_modules/@prisma/db-chat
 COPY --from=builder /app/node_modules/@prisma/db-auth ./node_modules/@prisma/db-auth
 COPY --from=builder /app/node_modules/@prisma/db-server ./node_modules/@prisma/db-server
 
-# Migration and startup
-CMD ["sh", "-c", "node dist/main.js"]
+# Запускаем приложение
+CMD ["node", "dist/main.js"]

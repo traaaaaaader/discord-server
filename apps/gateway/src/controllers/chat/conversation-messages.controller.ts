@@ -75,7 +75,6 @@ export class ConversationMessagesController {
     @CurrentUser('id') userId: string,
     @Query() query: { messageId: string; conversationId: string },
   ) {
-    console.log(userId, query);
     const result = await firstValueFrom(
       this.chatClient.send(
         { cmd: 'delete-conversation-message' },

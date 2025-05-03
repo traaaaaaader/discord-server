@@ -1,46 +1,62 @@
-# Stage 1: Build
+# Stage 1: Builder
 FROM node:18-alpine AS builder
+
+# Устанавливаем системные зависимости для сборки
+RUN apk add --no-cache \
+    curl \
+    python3 \
+    pkgconfig \
+    make \
+    g++ \
+    libc6-compat \
+    bash \
+    libtool \
+    autoconf \
+    automake \
+    py3-pip \
+    linux-headers \
+    cmake \
+    ninja
 
 WORKDIR /app
 
-# Copy dependency files
+# Копируем файлы зависимостей и Prisma (минимальный набор)
 COPY package*.json ./
 COPY prisma/ ./prisma/
 
-# Install dependencies and generate Prisma client
-RUN apk add --no-cache curl && \
-    npm ci && \
-    npm run prisma:gen
+# Устанавливаем зависимости и генерируем Prisma Client
+RUN npm ci && npm run prisma:gen
 
-# Copy source code
+# Копируем остальной исходный код
 COPY . .
 
-# Build specific service
+# Собираем приложение для сервиса server
 RUN npm run build server
+
 
 # Stage 2: Production
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Install curl for healthchecks
+# Устанавливаем curl для healthcheck
 RUN apk add --no-cache curl
 
-# Copy production dependencies
+# Копируем package.json и устанавливаем production-зависимости
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
-# Copy built files and Prisma schema
+# Копируем собранные файлы и Prisma схемы
 COPY --from=builder /app/dist/apps/server ./dist
 COPY --from=builder /app/prisma/chat/schema.prisma ./prisma/chat/
 COPY --from=builder /app/prisma/user/schema.prisma ./prisma/user/
 COPY --from=builder /app/prisma/server/schema.prisma ./prisma/server/
 
-# Copy Prisma client
+# Копируем сгенерированные Prisma клиенты и дополнительный модуль (если требуется)
 COPY --from=builder /app/node_modules/.prisma/client ./node_modules/.prisma/client
 COPY --from=builder /app/node_modules/@prisma/db-chat ./node_modules/@prisma/db-chat
 COPY --from=builder /app/node_modules/@prisma/db-auth ./node_modules/@prisma/db-auth
 COPY --from=builder /app/node_modules/@prisma/db-server ./node_modules/@prisma/db-server
 
-# Migration and startup
+# Запускаем приложение
 CMD ["node", "dist/main.js"]

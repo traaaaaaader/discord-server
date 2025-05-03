@@ -41,7 +41,6 @@ export class FilesService {
   async initializeBucket() {
     try {
       await this.createBucketIfNotExists();
-      console.log('Bucket initialization completed');
     } catch (error) {
       console.error('Bucket initialization failed', error.stack);
       throw error;

@@ -1,10 +1,23 @@
 # Используем базовый образ Node.js
 FROM node:18-alpine
 
-# Устанавливаем зависимости для Prisma и системные зависимости
-RUN apk add --no-cache openssl
+# Устанавливаем системные зависимости для сборки
+RUN apk add --no-cache \
+    curl \
+    python3 \
+    pkgconfig \
+    make \
+    g++ \
+    libc6-compat \
+    bash \
+    libtool \
+    autoconf \
+    automake \
+    py3-pip \
+    linux-headers \
+    cmake \
+    ninja
 
-# Устанавливаем рабочую директорию
 WORKDIR /app
 
 # Копируем package.json и package-lock.json
@@ -12,8 +25,7 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Устанавливаем зависимости
-RUN npm install
-RUN npm install prisma --save-dev
+RUN npm ci --omit=dev --ignore-scripts
 
 # Копируем все файлы проекта
 COPY . .
