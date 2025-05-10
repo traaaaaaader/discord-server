@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 
 import { PrismaModule } from '../prisma/prisma.module';
@@ -9,11 +9,13 @@ import { ChatGateway } from '../chat.gateway';
 
 import { UsersModule } from '../users/users.module';
 import { ConfigService } from '@nestjs/config';
+import { ChatModule } from '../chat.module';
 
 @Module({
   imports: [
     PrismaModule,
     UsersModule,
+    forwardRef(() => ChatModule),
     ClientsModule.registerAsync([
       {
         name: process.env.RABBIT_MQ_SERVER_CLIENT,
@@ -33,6 +35,6 @@ import { ConfigService } from '@nestjs/config';
     ]),
   ],
   controllers: [MessagesController],
-  providers: [MessagesService, ChatGateway],
+  providers: [MessagesService],
 })
 export class MessagesModule {}

@@ -1,19 +1,20 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 
 import { PrismaModule } from '../prisma/prisma.module';
 
 import { ConversationMessagesController } from './conversationMessages.controller';
 import { ConversationMessagesService } from './conversationMessages.service';
-import { ChatGateway } from '../chat.gateway';
 
 import { UsersModule } from '../users/users.module';
+import { ChatModule } from '../chat.module';
 
 @Module({
   imports: [
     PrismaModule,
     UsersModule,
+    forwardRef(() => ChatModule),
   ],
   controllers: [ConversationMessagesController],
-  providers: [ConversationMessagesService, ChatGateway],
+  providers: [ConversationMessagesService],
 })
 export class ConversationMessagesModule {}

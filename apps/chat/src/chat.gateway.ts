@@ -1,229 +1,282 @@
-import { OnModuleInit, Logger } from '@nestjs/common';
 import {
   WebSocketGateway,
   WebSocketServer,
   SubscribeMessage,
   ConnectedSocket,
   MessageBody,
-  WsException,
+  OnGatewayInit,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { Logger } from '@nestjs/common';
 
-import { types as mediasoupTypes } from 'mediasoup';
-import { createWorker } from 'mediasoup';
+import { JoinChannelDto } from './dto/join-channel.dto';
+import { RoomService } from './mediasoup/room/room.service';
+import { TransportService } from './mediasoup/transport/transport.service';
+import { ProducerConsumerService } from './mediasoup/producer-consumer/producer-consumer.service';
+import { MediaKind } from 'mediasoup/node/lib/types';
 
-import { mediasoupConfig } from './mediasoup/mediasoup.config';
-import { Room } from './mediasoup/room.entity';
-import { Peer } from './mediasoup/peer.entity';
+interface UserSession {
+  channelId: string;
+  username: string;
+  avatar: string;
+}
 
 @WebSocketGateway({
   cors: { origin: process.env.CLIENT_URL, credentials: true },
   path: '/socket/io',
   addTrailingSlash: false,
 })
-export class ChatGateway implements OnModuleInit {
+export class ChatGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
+  private userSessions = new Map<string, UserSession>();
   private readonly logger = new Logger(ChatGateway.name);
-  private workers: mediasoupTypes.Worker[] = [];
-  private nextWorkerIndex = 0;
-  private roomList = new Map<string, Room>();
 
-  async onModuleInit() {
-    await this.createWorkers();
+  constructor(
+    private readonly roomService: RoomService,
+    private readonly transportService: TransportService,
+    private readonly producerConsumerService: ProducerConsumerService,
+  ) {}
+
+  afterInit() {
+    this.logger.log('WebSocket server initialized');
   }
 
-  private async createWorkers() {
-    const { numWorkers, worker: workerSettings } = mediasoupConfig.mediasoup;
-    for (let i = 0; i < numWorkers; ++i) {
-      const worker = await createWorker({
-        logLevel: workerSettings.logLevel,
-        logTags: workerSettings.logTags,
-        rtcMinPort: workerSettings.rtcMinPort,
-        rtcMaxPort: workerSettings.rtcMaxPort,
-      });
-      worker.on('died', () => {
-        this.logger.error(
-          `mediasoup Worker died [pid:${worker.pid}], exiting...`,
-        );
-        setTimeout(() => process.exit(1), 2000);
-      });
-      this.workers.push(worker);
-    }
+  handleConnection(client: Socket) {
+    this.logger.log(`Client connected: ${client.id}`);
   }
 
-  private getMediasoupWorker(): mediasoupTypes.Worker {
-    const worker = this.workers[this.nextWorkerIndex];
-    this.nextWorkerIndex = (this.nextWorkerIndex + 1) % this.workers.length;
-    return worker;
+  async handleDisconnect(client: Socket) {
+    this.logger.log(`Client disconnecting: ${client.id}`);
+    await this.handleLeaveRoom(client);
+    this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  @SubscribeMessage('createRoom')
-  async handleCreateRoom(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() { room_id }: { room_id: string },
-  ): Promise<string> {
-    if (this.roomList.has(room_id)) {
-      throw new WsException('Room already exists');
-    }
-    this.logger.log(`Created room ${room_id}`);
-    const worker = await this.getMediasoupWorker();
-    this.logger.log(`Get worker ${worker}`);
-    const room = await Room.create(room_id, worker, this.server);
-    console.log(`Create room ${room}`);
-    this.roomList.set(room_id, room);
-    console.log(`List rooms ${this.roomList}`);
-    return room_id;
-  }
-
-  @SubscribeMessage('join')
-  async handleJoin(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() { room_id, name }: { room_id: string; name: string },
+  @SubscribeMessage('join-room')
+  async handleJoinChannel(
+    @MessageBody() dto: JoinChannelDto,
+    @ConnectedSocket() client: Socket,
   ) {
-    if (!this.roomList.has(room_id)) {
-      throw new WsException('Room does not exist');
+    const { roomId, peerId, username, avatar } = dto;
+    this.logger.log(
+      `Join room request: roomId=${roomId}, peerId=${peerId}, username=${username}`,
+    );
+
+    try {
+      const room = await this.roomService.createRoom(roomId);
+      this.logger.debug(`Room ${roomId} created/fetched`);
+
+      const [sendTransportOptions, recvTransportOptions] = await Promise.all([
+        this.transportService.createWebRtcTransport(
+          roomId,
+          peerId,
+          'send',
+          username,
+        ),
+        this.transportService.createWebRtcTransport(
+          roomId,
+          peerId,
+          'recv',
+          username,
+        ),
+      ]);
+
+      client.join(roomId);
+      this.userSessions.set(client.id, { channelId: roomId, username, avatar });
+      this.logger.log(`Client ${client.id} joined room ${roomId}`);
+
+      this.server.emit('userJoined', { channelId: roomId, username, avatar });
+
+      const peerIds = Array.from(room.peers.keys());
+      const existingProducers = this.getExistingProducers(room, peerId);
+
+      client.emit('update-peer-list', { peerIds });
+      client.to(roomId).emit('new-peer', { peerId });
+
+      const participants = Array.from(this.userSessions.values());
+      this.logger.log(`Room ${roomId} now has ${participants.length} participants`);
+
+      return {
+        sendTransportOptions,
+        recvTransportOptions,
+        rtpCapabilities: room.router.router.rtpCapabilities,
+        peerIds,
+        existingProducers,
+        participants,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Join room failed: ${error.message}`,
+        error.stack,
+      );
+      client.emit('join-room-error', { error: error.message });
+      return { error: error.message };
     }
-    const room = this.roomList.get(room_id);
-    room.addPeer(new Peer(socket.id, name));
-    socket.data.room_id = room_id;
-    this.logger.log(`Join room ${room_id}`);
-    return room.toJson();
   }
 
-  @SubscribeMessage('getProducers')
-  handleGetProducers(@ConnectedSocket() socket: Socket): void {
-    const room = this.roomList.get(socket.data.room_id);
-    if (!room) return;
-    const list = room.getProducerListForPeer();
-    this.logger.log(`Get producers ${list}`);
-    socket.emit('newProducers', list);
+  private getExistingProducers(room, peerId: string) {
+    const existingProducers = [];
+    for (const [otherPeerId, peer] of room.peers) {
+      if (otherPeerId !== peerId) {
+        for (const producer of peer.producers.values()) {
+          existingProducers.push({
+            producerId: producer.producer.id,
+            peerId: otherPeerId,
+            kind: producer.producer.kind,
+            username: peer.username,
+          });
+        }
+      }
+    }
+    return existingProducers;
   }
 
-  @SubscribeMessage('getRouterRtpCapabilities')
-  handleGetRtp(
-    @ConnectedSocket() socket: Socket,
-  ): mediasoupTypes.RtpCapabilities {
-    this.logger.log(`Get RouterRtpCapabilities`, {
-      name: `${this.roomList.get(socket.data.room_id).getPeers().get(socket.id).name}`,
-    });
-    const room = this.roomList.get(socket.data.room_id);
-    if (!room) throw new WsException('Not in a room');
-    return room.getRtpCapabilities();
+  @SubscribeMessage('leave-room')
+  async handleLeaveRoom(@ConnectedSocket() client: Socket) {
+    this.logger.log(`Leave room request from ${client.id}`);
+    const rooms = Array.from(client.rooms);
+
+    const session = this.userSessions.get(client.id);
+    if (session) {
+      const { channelId, username } = session;
+      this.userSessions.delete(client.id);
+      this.server.emit('userLeft', { channelId, username });
+      this.logger.log(`User ${username} left channel ${channelId}`);
+    }
+
+    for (const roomId of rooms) {
+      if (roomId !== client.id) {
+        const room = this.roomService.getRoom(roomId);
+        if (room) {
+          this.cleanupPeerResources(client, room);
+          client.to(roomId).emit('peer-left', { peerId: client.id });
+          client.leave(roomId);
+          this.logger.log(`Client ${client.id} left room ${roomId}`);
+
+          if (room.peers.size === 0) {
+            this.roomService.removeRoom(roomId);
+            this.logger.log(`Room ${roomId} removed`);
+          }
+        }
+      }
+    }
+
+    return { participants: Array.from(this.userSessions.values()) };
   }
 
-  @SubscribeMessage('createWebRtcTransport')
-  async handleCreateTransport(@ConnectedSocket() socket: Socket) {
-    this.logger.log(`Create WebRTC transport`, {
-      name: `${this.roomList.get(socket.data.room_id).getPeers().get(socket.id).name}`,
-    });
-    const room = this.roomList.get(socket.data.room_id);
-    if (!room) throw new WsException('Not in a room');
-    const { params } = await room.createWebRtcTransport(socket.id);
-    return params;
+  private cleanupPeerResources(client: Socket, room) {
+    const peer = room.peers.get(client.id);
+    if (peer) {
+      this.logger.log(`Cleaning resources for peer ${client.id}`);
+      peer.producers.forEach(producer => producer.producer.close());
+      peer.consumers.forEach(consumer => consumer.consumer.close());
+      peer.transports.forEach(transport => transport.transport.close());
+      room.peers.delete(client.id);
+    }
   }
 
-  @SubscribeMessage('connectTransport')
+  @SubscribeMessage('connect-transport')
   async handleConnectTransport(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody()
-    {
-      transport_id,
-      dtlsParameters,
-    }: { transport_id: string; dtlsParameters: mediasoupTypes.DtlsParameters },
+    @MessageBody() data,
+    @ConnectedSocket() client: Socket,
   ) {
-    this.logger.log(`Connect transport`, {
-      name: `${this.roomList.get(socket.data.room_id).getPeers().get(socket.id).name}`,
-    });
-    const room = this.roomList.get(socket.data.room_id);
-    if (!room) throw new WsException('Not in a room');
-    await room.connectPeerTransport(socket.id, transport_id, dtlsParameters);
+    this.logger.log(`Connect transport request: ${JSON.stringify(data)}`);
+    const { roomId, peerId, dtlsParameters, transportId } = data;
+    
+    try {
+      const room = this.roomService.getRoom(roomId);
+      const peer = room?.peers.get(peerId);
+      
+      if (!peer) {
+        this.logger.warn(`Peer ${peerId} not found in room ${roomId}`);
+        return { error: 'Peer not found' };
+      }
+
+      const transportData = peer.transports.get(transportId);
+      if (!transportData) {
+        this.logger.warn(`Transport ${transportId} not found for peer ${peerId}`);
+        return { error: 'Transport not found' };
+      }
+
+      await transportData.transport.connect({ dtlsParameters });
+      this.logger.log(`Transport ${transportId} connected successfully`);
+      
+      return { connected: true };
+    } catch (error) {
+      this.logger.error(
+        `Transport connect failed: ${error.message}`,
+        error.stack,
+      );
+      return { error: error.message };
+    }
   }
 
   @SubscribeMessage('produce')
-  async handleProduce(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody()
-    {
-      kind,
-      rtpParameters,
-      producerTransportId,
-    }: {
-      kind: mediasoupTypes.MediaKind;
-      rtpParameters: mediasoupTypes.RtpParameters;
-      producerTransportId: string;
-    },
-  ): Promise<string> {
-    const room = this.roomList.get(socket.data.room_id);
-    if (!room) throw new WsException('Not in a room');
-    const producer_id = await room.produce(
-      socket.id,
-      producerTransportId,
-      rtpParameters,
-      kind,
-    );
-    this.logger.log(`Produce`, {
-      type: `${kind}`,
-      name: `${room.getPeers().get(socket.id).name}`,
-      id: `${producer_id}`,
-    });
-    return producer_id;
+  async handleProduce(@MessageBody() data, @ConnectedSocket() client: Socket) {
+    this.logger.log(`Produce request: ${JSON.stringify(data)}`);
+    const { roomId, peerId, username, kind, transportId, rtpParameters } = data;
+
+    try {
+      const producerId = await this.producerConsumerService.createProducer({
+        roomId,
+        peerId,
+        transportId,
+        kind,
+        rtpParameters,
+      });
+
+      this.logger.log(`Producer created: ${producerId}`);
+      client.to(roomId).emit('new-producer', { producerId, peerId, username, kind });
+
+      return { producerId };
+    } catch (error) {
+      this.logger.error(
+        `Produce failed: ${error.message}`,
+        error.stack,
+      );
+      client.emit('produce-error', { error: error.message });
+      return { error: error.message };
+    }
   }
 
   @SubscribeMessage('consume')
-  async handleConsume(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody()
-    {
-      consumerTransportId,
-      producerId,
-      rtpCapabilities,
-    }: {
-      consumerTransportId: string;
-      producerId: string;
-      rtpCapabilities: mediasoupTypes.RtpCapabilities;
-    },
+  async handleConsume(@MessageBody() data, @ConnectedSocket() client: Socket) {
+    this.logger.log(`Consume request: ${JSON.stringify(data)}`);
+    const { roomId, peerId, producerId, rtpCapabilities, transportId } = data;
+    
+    try {
+      const consumerData = await this.producerConsumerService.createConsumer({
+        roomId,
+        peerId,
+        transportId,
+        producerId,
+        rtpCapabilities,
+      });
+
+      this.logger.log(`Consumer created for producer ${producerId}`);
+      return { consumerData };
+    } catch (error) {
+      this.logger.error(
+        `Consume failed: ${error.message}`,
+        error.stack,
+      );
+      client.emit('consume-error', { error: error.message });
+      return { error: error.message };
+    }
+  }
+
+  @SubscribeMessage('getParticipants')
+  handleGetParticipants(
+    @MessageBody() data: { channelId: string },
+    @ConnectedSocket() client: Socket,
   ) {
-    const room = this.roomList.get(socket.data.room_id);
-    if (!room) throw new WsException('Not in a room');
-    const params = await room.consume(
-      socket.id,
-      consumerTransportId,
-      producerId,
-      rtpCapabilities,
-    );
-    this.logger.log(`Consume`, {
-      name: `${room.getPeers().get(socket.id).name}`,
-      producer_id: `${producerId}`,
-      consumer_id: `${params.id}`,
-    });
-    return params;
-  }
-
-  @SubscribeMessage('producerClosed')
-  handleProducerClosed(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() { producer_id }: { producer_id: string },
-  ): void {
-    this.logger.log(`Producer closed`, {
-      name: `${this.roomList.get(socket.data.room_id).getPeers().get(socket.id).name}`,
-    });
-    const room = this.roomList.get(socket.data.room_id);
-    if (!room) return;
-    room.closeProducer(socket.id, producer_id);
-  }
-
-  @SubscribeMessage('exitRoom')
-  async handleExit(@ConnectedSocket() socket: Socket): Promise<string> {
-    this.logger.log(`Exit room`, {
-      name: `${this.roomList.get(socket.data.room_id)?.getPeers().get(socket.id).name}`,
-    });
-    const room = this.roomList.get(socket.data.room_id);
-    if (!room) throw new WsException('Not in a room');
-    await room.removePeer(socket.id);
-    if (room.getPeers().size === 0) this.roomList.delete(room.id);
-    socket.data.room_id = null;
-    return 'success';
+    this.logger.log(`Get participants for channel ${data.channelId}`);
+    const participants = Array.from(this.userSessions.values());
+    return { status: 'ok', participants };
   }
 }

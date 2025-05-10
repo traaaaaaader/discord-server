@@ -39,8 +39,9 @@ export class AuthController {
 
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,
+      // secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
     });
 
     return res.json({ accessToken: result.accessToken });
@@ -57,8 +58,9 @@ export class AuthController {
     );
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,
+      // secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
     });
 
     return res.json({ accessToken: result.accessToken });
@@ -75,8 +77,9 @@ export class AuthController {
     );
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,
+      // secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
     });
 
     return res.json({ accessToken: result.accessToken });
@@ -105,8 +108,9 @@ export class AuthController {
 
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,
+      // secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
     });
 
     res.redirect(this.configService.getOrThrow<string>('CLIENT_URL'));
