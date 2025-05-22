@@ -12,7 +12,7 @@ export class MediasoupService implements OnModuleInit {
   public async onModuleInit() {
     const numWorkers = os.cpus().length;
     this.logger.log(`Initializing ${numWorkers} mediasoup workers`);
-    
+
     for (let i = 0; i < numWorkers; ++i) {
       await this.createWorker();
     }
@@ -24,6 +24,8 @@ export class MediasoupService implements OnModuleInit {
       const worker = await mediasoup.createWorker({
         rtcMinPort: 6002,
         rtcMaxPort: 6202,
+        logLevel: 'warn',
+        logTags: ['info', 'ice', 'dtls', 'rtp', 'srtp'],
       });
 
       worker.on('died', () => {

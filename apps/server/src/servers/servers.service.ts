@@ -37,7 +37,7 @@ export class ServersService {
         imageUrl,
         inviteCode: uuidv4(),
         channels: {
-          create: [{ name: 'general', userId }],
+          create: [{ name: 'general' }],
         },
         members: {
           create: [{ userId, role: MemberRole.ADMIN }],

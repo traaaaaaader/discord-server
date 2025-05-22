@@ -44,7 +44,6 @@ export class ChannelsService {
         id: serverId,
         members: {
           some: {
-            userId: userId,
             role: {
               in: [MemberRole.ADMIN, MemberRole.MODERATOR],
             },
@@ -54,7 +53,6 @@ export class ChannelsService {
       data: {
         channels: {
           create: {
-            userId: userId,
             name,
             type,
           },

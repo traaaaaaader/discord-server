@@ -16,7 +16,9 @@ export class TransportService {
     direction: 'send' | 'recv',
     username: string,
   ): Promise<ITransportOptions> {
-    this.logger.log(`Creating ${direction} transport for peer ${peerId} in room ${roomId}`);
+    this.logger.log(
+      `Creating ${direction} transport for peer ${peerId} in room ${roomId}`,
+    );
 
     try {
       const room = this.roomService.getRoom(roomId);
@@ -30,12 +32,14 @@ export class TransportService {
         appData: { peerId, clientDirection: direction },
       });
 
+      await transport.setMaxIncomingBitrate(1_500_000);
+
       this.roomService.addPeerToRoom(roomId, peerId, username);
       const peer = room.peers.get(peerId)!;
       peer.transports.set(transport.id, { transport });
 
       this.logger.log(`Transport ${transport.id} created for peer ${peerId}`);
-      
+
       return {
         id: transport.id,
         iceParameters: transport.iceParameters,
@@ -43,7 +47,10 @@ export class TransportService {
         dtlsParameters: transport.dtlsParameters,
       };
     } catch (error) {
-      this.logger.error(`Transport creation failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Transport creation failed: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }

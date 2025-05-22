@@ -22,7 +22,6 @@ model User {
 
   servers  Server[]
   members  Member[]
-  channels Channel[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -84,16 +83,12 @@ model Channel {
   name String
   type ChannelType @default(TEXT)
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   serverId String
   server   Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([userId])
   @@index([serverId])
   @@map("channels")
 }

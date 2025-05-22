@@ -15,7 +15,6 @@ import { JoinChannelDto } from './dto/join-channel.dto';
 import { RoomService } from './mediasoup/room/room.service';
 import { TransportService } from './mediasoup/transport/transport.service';
 import { ProducerConsumerService } from './mediasoup/producer-consumer/producer-consumer.service';
-import { MediaKind } from 'mediasoup/node/lib/types';
 
 interface UserSession {
   channelId: string;
@@ -99,7 +98,9 @@ export class ChatGateway
       client.to(roomId).emit('new-peer', { peerId });
 
       const participants = Array.from(this.userSessions.values());
-      this.logger.log(`Room ${roomId} now has ${participants.length} participants`);
+      this.logger.log(
+        `Room ${roomId} now has ${participants.length} participants`,
+      );
 
       return {
         sendTransportOptions,
@@ -110,10 +111,7 @@ export class ChatGateway
         participants,
       };
     } catch (error) {
-      this.logger.error(
-        `Join room failed: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`Join room failed: ${error.message}`, error.stack);
       client.emit('join-room-error', { error: error.message });
       return { error: error.message };
     }
@@ -173,9 +171,9 @@ export class ChatGateway
     const peer = room.peers.get(client.id);
     if (peer) {
       this.logger.log(`Cleaning resources for peer ${client.id}`);
-      peer.producers.forEach(producer => producer.producer.close());
-      peer.consumers.forEach(consumer => consumer.consumer.close());
-      peer.transports.forEach(transport => transport.transport.close());
+      peer.producers.forEach((producer) => producer.producer.close());
+      peer.consumers.forEach((consumer) => consumer.consumer.close());
+      peer.transports.forEach((transport) => transport.transport.close());
       room.peers.delete(client.id);
     }
   }
@@ -187,11 +185,11 @@ export class ChatGateway
   ) {
     this.logger.log(`Connect transport request: ${JSON.stringify(data)}`);
     const { roomId, peerId, dtlsParameters, transportId } = data;
-    
+
     try {
       const room = this.roomService.getRoom(roomId);
       const peer = room?.peers.get(peerId);
-      
+
       if (!peer) {
         this.logger.warn(`Peer ${peerId} not found in room ${roomId}`);
         return { error: 'Peer not found' };
@@ -199,13 +197,15 @@ export class ChatGateway
 
       const transportData = peer.transports.get(transportId);
       if (!transportData) {
-        this.logger.warn(`Transport ${transportId} not found for peer ${peerId}`);
+        this.logger.warn(
+          `Transport ${transportId} not found for peer ${peerId}`,
+        );
         return { error: 'Transport not found' };
       }
 
       await transportData.transport.connect({ dtlsParameters });
       this.logger.log(`Transport ${transportId} connected successfully`);
-      
+
       return { connected: true };
     } catch (error) {
       this.logger.error(
@@ -231,14 +231,13 @@ export class ChatGateway
       });
 
       this.logger.log(`Producer created: ${producerId}`);
-      client.to(roomId).emit('new-producer', { producerId, peerId, username, kind });
+      client
+        .to(roomId)
+        .emit('new-producer', { producerId, peerId, username, kind });
 
       return { producerId };
     } catch (error) {
-      this.logger.error(
-        `Produce failed: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`Produce failed: ${error.message}`, error.stack);
       client.emit('produce-error', { error: error.message });
       return { error: error.message };
     }
@@ -248,7 +247,7 @@ export class ChatGateway
   async handleConsume(@MessageBody() data, @ConnectedSocket() client: Socket) {
     this.logger.log(`Consume request: ${JSON.stringify(data)}`);
     const { roomId, peerId, producerId, rtpCapabilities, transportId } = data;
-    
+
     try {
       const consumerData = await this.producerConsumerService.createConsumer({
         roomId,
@@ -261,10 +260,7 @@ export class ChatGateway
       this.logger.log(`Consumer created for producer ${producerId}`);
       return { consumerData };
     } catch (error) {
-      this.logger.error(
-        `Consume failed: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`Consume failed: ${error.message}`, error.stack);
       client.emit('consume-error', { error: error.message });
       return { error: error.message };
     }
@@ -278,5 +274,35 @@ export class ChatGateway
     this.logger.log(`Get participants for channel ${data.channelId}`);
     const participants = Array.from(this.userSessions.values());
     return { status: 'ok', participants };
+  }
+
+  @SubscribeMessage('producer-pause')
+  async handleProducerPause(
+    @MessageBody() { roomId, producerId },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const peer = this.roomService.getRoom(roomId).peers.get(client.id);
+    const pc = peer?.producers.get(producerId);
+    if (pc) {
+      await pc.producer.pause();
+      this.server
+        .to(roomId)
+        .emit('producer-paused', { producerId, peerId: client.id });
+    }
+  }
+
+  @SubscribeMessage('producer-resume')
+  async handleProducerResume(
+    @MessageBody() { roomId, producerId },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const peer = this.roomService.getRoom(roomId).peers.get(client.id);
+    const pc = peer?.producers.get(producerId);
+    if (pc) {
+      await pc.producer.resume();
+      this.server
+        .to(roomId)
+        .emit('producer-resumed', { producerId, peerId: client.id });
+    }
   }
 }

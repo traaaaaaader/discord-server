@@ -6,6 +6,7 @@ export const mediaCodecs: mediasoup.types.RtpCodecCapability[] = [
     mimeType: 'audio/opus',
     clockRate: 48000,
     channels: 2,
+    parameters: { useinbandfec: 1, usedtx: 1, maxptime: 120 },
   },
   {
     kind: 'video',
@@ -58,4 +59,7 @@ export const webRtcTransport_options: mediasoup.types.WebRtcTransportOptions = {
   enableUdp: true,
   enableTcp: true,
   preferUdp: true,
+  initialAvailableOutgoingBitrate: 1_000_000,
+  enableSctp: true,
+  numSctpStreams: { OS: 1024, MIS: 1024 },
 };

@@ -26,14 +26,14 @@ export class ProducerConsumerService {
         throw new Error(`Peer ${peerId} not found`);
       }
 
-      const already = Array.from(peer.producers.values()).find(
-        (p) =>
-          p.producer.appData?.transportId === transportId &&
-          p.producer.kind === kind,
+      const existing = Array.from(peer.producers.values()).find(
+        ({ producer }) =>
+          producer.appData?.peerId === peerId &&
+          producer.appData?.kind === kind,
       );
-      if (already) {
-        this.logger.debug(`Reusing existing producer ${already.producer.id}`);
-        return already.producer.id;
+      if (existing) {
+        this.logger.debug(`Reusing existing producer ${existing.producer.id}`);
+        return existing.producer.id;
       }
 
       const transportData = peer.transports.get(transportId);
@@ -45,6 +45,7 @@ export class ProducerConsumerService {
       const producer = await transportData.transport.produce({
         kind,
         rtpParameters,
+        appData: { peerId, kind },
       });
       peer.producers.set(producer.id, { producer });
 
