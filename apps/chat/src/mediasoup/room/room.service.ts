@@ -51,7 +51,7 @@ export class RoomService {
     }
   }
 
-  public addPeerToRoom(roomId: string, peerId: string, username: string) {
+  public addPeerToRoom(roomId: string, peerId: string) {
     this.logger.log(`Adding peer ${peerId} to room ${roomId}`);
     
     const room = this.rooms.get(roomId);
@@ -66,7 +66,6 @@ export class RoomService {
         transports: new Map(),
         producers: new Map(),
         consumers: new Map(),
-        username,
       });
       this.logger.debug(`Peer ${peerId} added to room ${roomId}`);
     } else {

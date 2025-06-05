@@ -12,6 +12,8 @@ import { JwtAccessGuard } from '../guards/jwt-access.guard';
 
 import { AuthService } from './auth.service';
 import { UsersModule } from '../users/users.module';
+import { JwtSocketGuard } from '../guards/jwt-socket.guard';
+import { JwtSocketStrategy } from '../strategies/jwt-socket.strategy';
 
 @Module({
   imports: [
@@ -27,8 +29,10 @@ import { UsersModule } from '../users/users.module';
     LocalStrategy,
     JwtRefreshStrategy,
     JwtAccessStrategy,
+    JwtSocketStrategy,
     GoogleStrategy,
     JwtAccessGuard,
+    JwtSocketGuard,
     GoogleGuard,
   ],
   exports: [AuthService],

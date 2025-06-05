@@ -14,7 +14,6 @@ export class TransportService {
     roomId: string,
     peerId: string,
     direction: 'send' | 'recv',
-    username: string,
   ): Promise<ITransportOptions> {
     this.logger.log(
       `Creating ${direction} transport for peer ${peerId} in room ${roomId}`,
@@ -34,7 +33,7 @@ export class TransportService {
 
       await transport.setMaxIncomingBitrate(1_500_000);
 
-      this.roomService.addPeerToRoom(roomId, peerId, username);
+      this.roomService.addPeerToRoom(roomId, peerId);
       const peer = room.peers.get(peerId)!;
       peer.transports.set(transport.id, { transport });
 

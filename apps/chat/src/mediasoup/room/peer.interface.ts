@@ -9,5 +9,4 @@ export interface Peer {
   transports: Map<string, ITransport>;
   producers: Map<string, IProducer>;
   consumers: Map<string, IConsumer>;
-  username: string;
 }

@@ -4,32 +4,33 @@ import {
   SubscribeMessage,
   ConnectedSocket,
   MessageBody,
-  OnGatewayInit,
-  OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common';
 
-import { JoinChannelDto } from './dto/join-channel.dto';
 import { RoomService } from './mediasoup/room/room.service';
 import { TransportService } from './mediasoup/transport/transport.service';
 import { ProducerConsumerService } from './mediasoup/producer-consumer/producer-consumer.service';
+import { IRoom } from './mediasoup/room/room.interface';
+import { User } from '@prisma/db-auth';
+import { types } from 'mediasoup';
+import { CurrentUser, JwtSocketGuard } from '@app/core-lib';
 
 interface UserSession {
-  channelId: string;
+  socketId: string;
+  roomId: string;
   username: string;
   avatar: string;
 }
 
+@UseGuards(JwtSocketGuard)
 @WebSocketGateway({
   cors: { origin: process.env.CLIENT_URL, credentials: true },
   path: '/socket/io',
   addTrailingSlash: false,
 })
-export class ChatGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+export class ChatGateway implements OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -42,14 +43,6 @@ export class ChatGateway
     private readonly producerConsumerService: ProducerConsumerService,
   ) {}
 
-  afterInit() {
-    this.logger.log('WebSocket server initialized');
-  }
-
-  handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
-  }
-
   async handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnecting: ${client.id}`);
     await this.handleLeaveRoom(client);
@@ -58,12 +51,13 @@ export class ChatGateway
 
   @SubscribeMessage('join-room')
   async handleJoinChannel(
-    @MessageBody() dto: JoinChannelDto,
+    @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
+    @CurrentUser() user: User,
   ) {
-    const { roomId, peerId, username, avatar } = dto;
+    const roomId = data.roomId;
     this.logger.log(
-      `Join room request: roomId=${roomId}, peerId=${peerId}, username=${username}`,
+      `Join room request: roomId=${roomId}, peerId=${user.id}, username=${user.name}`,
     );
 
     try {
@@ -71,31 +65,47 @@ export class ChatGateway
       this.logger.debug(`Room ${roomId} created/fetched`);
 
       const [sendTransportOptions, recvTransportOptions] = await Promise.all([
-        this.transportService.createWebRtcTransport(
-          roomId,
-          peerId,
-          'send',
-          username,
-        ),
-        this.transportService.createWebRtcTransport(
-          roomId,
-          peerId,
-          'recv',
-          username,
-        ),
+        this.transportService.createWebRtcTransport(roomId, user.id, 'send'),
+        this.transportService.createWebRtcTransport(roomId, user.id, 'recv'),
       ]);
 
       client.join(roomId);
-      this.userSessions.set(client.id, { channelId: roomId, username, avatar });
-      this.logger.log(`Client ${client.id} joined room ${roomId}`);
 
-      this.server.emit('userJoined', { channelId: roomId, username, avatar });
+      if (this.userSessions.has(user.id)) {
+        const existingSession = this.userSessions.get(user.id);
+        const oldClient = this.server.sockets.sockets.get(
+          existingSession.socketId,
+        );
+        if (oldClient) {
+          oldClient.disconnect(true);
+        }
+      }
+      this.userSessions.set(user.id, {
+        socketId: client.id,
+        roomId,
+        username: user.name,
+        avatar: user.imageUrl,
+      });
+
+      this.logger.log(`Client ${user.name} joined room ${roomId}`);
+
+      client.to(roomId).emit('user-joined', {
+        roomId,
+        username: user.name,
+        avatar: user.imageUrl,
+      });
+
+      this.server.to(roomId).emit('user-joined', {
+        roomId,
+        username: user.name,
+        avatar: user.imageUrl,
+      });
 
       const peerIds = Array.from(room.peers.keys());
-      const existingProducers = this.getExistingProducers(room, peerId);
+      const existingProducers = this.getExistingProducers(room, user.id);
 
       client.emit('update-peer-list', { peerIds });
-      client.to(roomId).emit('new-peer', { peerId });
+      client.to(roomId).emit('new-peer', { peerId: user.id });
 
       const participants = Array.from(this.userSessions.values());
       this.logger.log(
@@ -117,7 +127,7 @@ export class ChatGateway
     }
   }
 
-  private getExistingProducers(room, peerId: string) {
+  private getExistingProducers(room: IRoom, peerId: string) {
     const existingProducers = [];
     for (const [otherPeerId, peer] of room.peers) {
       if (otherPeerId !== peerId) {
@@ -126,7 +136,6 @@ export class ChatGateway
             producerId: producer.producer.id,
             peerId: otherPeerId,
             kind: producer.producer.kind,
-            username: peer.username,
           });
         }
       }
@@ -136,25 +145,35 @@ export class ChatGateway
 
   @SubscribeMessage('leave-room')
   async handleLeaveRoom(@ConnectedSocket() client: Socket) {
-    this.logger.log(`Leave room request from ${client.id}`);
+    let peerId: string | null = null;
+    for (const [userId, session] of this.userSessions.entries()) {
+      if (session.socketId === client.id) {
+        peerId = userId;
+        break;
+      }
+    }
+
+    this.logger.log(`Leave room request from ${peerId}`);
     const rooms = Array.from(client.rooms);
 
-    const session = this.userSessions.get(client.id);
-    if (session) {
-      const { channelId, username } = session;
-      this.userSessions.delete(client.id);
-      this.server.emit('userLeft', { channelId, username });
-      this.logger.log(`User ${username} left channel ${channelId}`);
+    if (peerId) {
+      const session = this.userSessions.get(peerId);
+      if (session) {
+        const { roomId, username } = session;
+        this.userSessions.delete(peerId);
+        this.server.emit('user-left', { channelId: roomId, username });
+        this.logger.log(`User ${username} disconnected from room ${roomId}`);
+      }
     }
 
     for (const roomId of rooms) {
       if (roomId !== client.id) {
         const room = this.roomService.getRoom(roomId);
         if (room) {
-          this.cleanupPeerResources(client, room);
-          client.to(roomId).emit('peer-left', { peerId: client.id });
+          this.cleanupPeerResources(room, peerId);
+          client.to(roomId).emit('peer-left', { peerId });
           client.leave(roomId);
-          this.logger.log(`Client ${client.id} left room ${roomId}`);
+          this.logger.log(`Client ${peerId} left room ${roomId}`);
 
           if (room.peers.size === 0) {
             this.roomService.removeRoom(roomId);
@@ -167,38 +186,44 @@ export class ChatGateway
     return { participants: Array.from(this.userSessions.values()) };
   }
 
-  private cleanupPeerResources(client: Socket, room) {
-    const peer = room.peers.get(client.id);
+  private cleanupPeerResources(room: IRoom, peerId: string) {
+    const peer = room.peers.get(peerId);
     if (peer) {
-      this.logger.log(`Cleaning resources for peer ${client.id}`);
+      this.logger.log(`Cleaning resources for peer ${peerId}`);
       peer.producers.forEach((producer) => producer.producer.close());
       peer.consumers.forEach((consumer) => consumer.consumer.close());
       peer.transports.forEach((transport) => transport.transport.close());
-      room.peers.delete(client.id);
+      room.peers.delete(peerId);
     }
   }
 
   @SubscribeMessage('connect-transport')
   async handleConnectTransport(
-    @MessageBody() data,
+    @MessageBody()
+    data: {
+      roomId: string;
+      dtlsParameters: types.DtlsParameters;
+      transportId: string;
+    },
     @ConnectedSocket() client: Socket,
+    @CurrentUser('id') userId: string,
   ) {
     this.logger.log(`Connect transport request: ${JSON.stringify(data)}`);
-    const { roomId, peerId, dtlsParameters, transportId } = data;
+    const { roomId, dtlsParameters, transportId } = data;
 
     try {
       const room = this.roomService.getRoom(roomId);
-      const peer = room?.peers.get(peerId);
+      const peer = room?.peers.get(userId);
 
       if (!peer) {
-        this.logger.warn(`Peer ${peerId} not found in room ${roomId}`);
+        this.logger.warn(`Peer ${userId} not found in room ${roomId}`);
         return { error: 'Peer not found' };
       }
 
       const transportData = peer.transports.get(transportId);
       if (!transportData) {
         this.logger.warn(
-          `Transport ${transportId} not found for peer ${peerId}`,
+          `Transport ${transportId} not found for peer ${userId}`,
         );
         return { error: 'Transport not found' };
       }
@@ -217,23 +242,36 @@ export class ChatGateway
   }
 
   @SubscribeMessage('produce')
-  async handleProduce(@MessageBody() data, @ConnectedSocket() client: Socket) {
+  async handleProduce(
+    @MessageBody()
+    data: {
+      roomId: string;
+      kind: types.MediaKind;
+      transportId: string;
+      rtpParameters: types.RtpParameters;
+    },
+    @ConnectedSocket() client: Socket,
+    @CurrentUser() user: User,
+  ) {
     this.logger.log(`Produce request: ${JSON.stringify(data)}`);
-    const { roomId, peerId, username, kind, transportId, rtpParameters } = data;
+    const { roomId, kind, transportId, rtpParameters } = data;
 
     try {
       const producerId = await this.producerConsumerService.createProducer({
         roomId,
-        peerId,
+        peerId: user.id,
         transportId,
         kind,
         rtpParameters,
       });
 
       this.logger.log(`Producer created: ${producerId}`);
-      client
-        .to(roomId)
-        .emit('new-producer', { producerId, peerId, username, kind });
+      client.to(roomId).emit('new-producer', {
+        producerId,
+        peerId: user.id,
+        username: user.name,
+        kind,
+      });
 
       return { producerId };
     } catch (error) {
@@ -244,14 +282,24 @@ export class ChatGateway
   }
 
   @SubscribeMessage('consume')
-  async handleConsume(@MessageBody() data, @ConnectedSocket() client: Socket) {
+  async handleConsume(
+    @MessageBody()
+    data: {
+      roomId: string;
+      producerId: string;
+      rtpCapabilities: types.RtpCapabilities;
+      transportId: string;
+    },
+    @ConnectedSocket() client: Socket,
+    @CurrentUser('id') userId: string,
+  ) {
     this.logger.log(`Consume request: ${JSON.stringify(data)}`);
-    const { roomId, peerId, producerId, rtpCapabilities, transportId } = data;
+    const { roomId, producerId, rtpCapabilities, transportId } = data;
 
     try {
       const consumerData = await this.producerConsumerService.createConsumer({
         roomId,
-        peerId,
+        peerId: userId,
         transportId,
         producerId,
         rtpCapabilities,
@@ -266,43 +314,63 @@ export class ChatGateway
     }
   }
 
-  @SubscribeMessage('getParticipants')
+  @SubscribeMessage('get-participants')
   handleGetParticipants(
-    @MessageBody() data: { channelId: string },
+    @MessageBody() channelId: string,
     @ConnectedSocket() client: Socket,
   ) {
-    this.logger.log(`Get participants for channel ${data.channelId}`);
+    this.logger.log(`Get participants for channel ${channelId}`);
     const participants = Array.from(this.userSessions.values());
     return { status: 'ok', participants };
   }
 
   @SubscribeMessage('producer-pause')
   async handleProducerPause(
-    @MessageBody() { roomId, producerId },
+    @MessageBody() data: { roomId: string; producerId: string },
     @ConnectedSocket() client: Socket,
+    @CurrentUser('id') userId: string,
   ) {
-    const peer = this.roomService.getRoom(roomId).peers.get(client.id);
+    const { roomId, producerId } = data;
+    const peer = this.roomService.getRoom(roomId).peers.get(userId);
     const pc = peer?.producers.get(producerId);
     if (pc) {
       await pc.producer.pause();
-      this.server
-        .to(roomId)
-        .emit('producer-paused', { producerId, peerId: client.id });
+      this.server.to(roomId).emit('producer-paused', { producerId });
     }
   }
 
   @SubscribeMessage('producer-resume')
   async handleProducerResume(
-    @MessageBody() { roomId, producerId },
+    @MessageBody() data: { roomId: string; producerId: string },
     @ConnectedSocket() client: Socket,
+    @CurrentUser('id') userId: string,
   ) {
-    const peer = this.roomService.getRoom(roomId).peers.get(client.id);
+    const { roomId, producerId } = data;
+    const peer = this.roomService.getRoom(roomId).peers.get(userId);
     const pc = peer?.producers.get(producerId);
     if (pc) {
       await pc.producer.resume();
-      this.server
-        .to(roomId)
-        .emit('producer-resumed', { producerId, peerId: client.id });
+      this.server.to(roomId).emit('producer-resumed', { producerId });
     }
+  }
+
+  @SubscribeMessage('producer-close')
+  async handleProducerClose(
+    @MessageBody() data: { roomId: string; producerId: string },
+    @ConnectedSocket() client: Socket,
+    @CurrentUser('id') userId: string,
+  ) {
+    const { roomId, producerId } = data;
+    const peer = this.roomService.getRoom(roomId).peers.get(userId);
+    console.log('peer = ', peer);
+    console.log('roomId, producerId - ', roomId, producerId);
+    const pc = peer?.producers.get(producerId);
+    console.log('pc - ', pc);
+    if (pc) {
+      console.log('if work');
+      await pc.producer.close();
+      peer.producers.delete(producerId);
+    }
+    this.server.to(roomId).emit('producer-closed', { producerId });
   }
 }

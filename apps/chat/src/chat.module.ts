@@ -10,6 +10,7 @@ import { HealthModule } from './health/health.module';
 import { ConfigModule } from '@nestjs/config';
 import { ChatGateway } from './chat.gateway';
 import { MediasoupModule } from './mediasoup/mediasoup.module';
+import { AuthModule } from '@app/core-lib';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { MediasoupModule } from './mediasoup/mediasoup.module';
     }),
     forwardRef(() => MessagesModule),
     forwardRef(() => ConversationMessagesModule),
+    forwardRef(() => AuthModule),
     ConversationsModule,
     UsersModule,
     HealthModule,
