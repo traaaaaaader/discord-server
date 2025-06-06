@@ -16,12 +16,13 @@ import { IRoom } from './mediasoup/room/room.interface';
 import { User } from '@prisma/db-auth';
 import { types } from 'mediasoup';
 import { CurrentUser, JwtSocketGuard } from '@app/core-lib';
+import { ProducerEventDto } from './dto/producer-event.dto';
 
 interface UserSession {
-  socketId: string;
   roomId: string;
   username: string;
   avatar: string;
+  socketId: string;
 }
 
 @UseGuards(JwtSocketGuard)
@@ -44,9 +45,24 @@ export class ChatGateway implements OnGatewayDisconnect {
   ) {}
 
   async handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnecting: ${client.id}`);
-    await this.handleLeaveRoom(client);
-    this.logger.log(`Client disconnected: ${client.id}`);
+    const context = `handleDisconnect`;
+    this.logger.log(`[${context}] Client disconnecting`, {
+      clientId: client.id,
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      await this.handleLeaveRoom(client);
+      this.logger.log(`[${context}] Client successfully disconnected`, {
+        clientId: client.id,
+      });
+    } catch (error) {
+      this.logger.error(`[${context}] Error during client disconnect`, {
+        clientId: client.id,
+        error: error.message,
+        stack: error.stack,
+      });
+    }
   }
 
   @SubscribeMessage('join-room')
@@ -55,24 +71,48 @@ export class ChatGateway implements OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @CurrentUser() user: User,
   ) {
-    const roomId = data.roomId;
-    this.logger.log(
-      `Join room request: roomId=${roomId}, peerId=${user.id}, username=${user.name}`,
-    );
+    const context = `handleJoinChannel`;
+    const { roomId } = data;
+
+    this.logger.log(`[${context}] Join room request received`, {
+      roomId,
+      userId: user.id,
+      username: user.name,
+      clientId: client.id,
+    });
 
     try {
       const room = await this.roomService.createRoom(roomId);
-      this.logger.debug(`Room ${roomId} created/fetched`);
+      this.logger.debug(`[${context}] Room created/fetched successfully`, {
+        roomId,
+        peersCount: room.peers.size,
+      });
 
       const [sendTransportOptions, recvTransportOptions] = await Promise.all([
         this.transportService.createWebRtcTransport(roomId, user.id, 'send'),
         this.transportService.createWebRtcTransport(roomId, user.id, 'recv'),
       ]);
 
+      this.logger.debug(`[${context}] WebRTC transports created`, {
+        roomId,
+        userId: user.id,
+        sendTransportId: sendTransportOptions.id,
+        recvTransportId: recvTransportOptions.id,
+      });
+
       client.join(roomId);
 
       if (this.userSessions.has(user.id)) {
         const existingSession = this.userSessions.get(user.id);
+        this.logger.warn(
+          `[${context}] User already has active session, disconnecting old one`,
+          {
+            userId: user.id,
+            oldSocketId: existingSession.socketId,
+            newSocketId: client.id,
+          },
+        );
+
         const oldClient = this.server.sockets.sockets.get(
           existingSession.socketId,
         );
@@ -80,6 +120,7 @@ export class ChatGateway implements OnGatewayDisconnect {
           oldClient.disconnect(true);
         }
       }
+
       this.userSessions.set(user.id, {
         socketId: client.id,
         roomId,
@@ -87,30 +128,51 @@ export class ChatGateway implements OnGatewayDisconnect {
         avatar: user.imageUrl,
       });
 
-      this.logger.log(`Client ${user.name} joined room ${roomId}`);
+      this.logger.log(`[${context}] User successfully joined room`, {
+        userId: user.id,
+        username: user.name,
+        roomId,
+        clientId: client.id,
+      });
 
-      client.to(roomId).emit('user-joined', {
+      const userJoinedPayload = {
         roomId,
         username: user.name,
         avatar: user.imageUrl,
-      });
+        userId: user.id,
+      };
 
-      this.server.to(roomId).emit('user-joined', {
-        roomId,
-        username: user.name,
-        avatar: user.imageUrl,
-      });
+      client.to(roomId).emit('user-joined', userJoinedPayload);
+      this.server.emit('user-joined', userJoinedPayload);
 
       const peerIds = Array.from(room.peers.keys());
       const existingProducers = this.getExistingProducers(room, user.id);
+      
+      const participants = Array.from(this.userSessions.entries())
+        .filter(([_, session]) => session.roomId === roomId)
+        .map(([userId, session]) => ({
+          channelId: session.roomId,
+          username: session.username,
+          avatar: session.avatar,
+          userId,
+        }));
+
+      this.logger.debug(`[${context}] Sending response data`, {
+        roomId,
+        userId: user.id,
+        peersCount: peerIds.length,
+        existingProducersCount: existingProducers.length,
+        participantsCount: participants.length,
+      });
 
       client.emit('update-peer-list', { peerIds });
       client.to(roomId).emit('new-peer', { peerId: user.id });
 
-      const participants = Array.from(this.userSessions.values());
-      this.logger.log(
-        `Room ${roomId} now has ${participants.length} participants`,
-      );
+      this.logger.log(`[${context}] Room state updated`, {
+        roomId,
+        totalParticipants: participants.length,
+        totalPeers: peerIds.length,
+      });
 
       return {
         sendTransportOptions,
@@ -121,14 +183,23 @@ export class ChatGateway implements OnGatewayDisconnect {
         participants,
       };
     } catch (error) {
-      this.logger.error(`Join room failed: ${error.message}`, error.stack);
+      this.logger.error(`[${context}] Join room operation failed`, {
+        roomId,
+        userId: user.id,
+        clientId: client.id,
+        error: error.message,
+        stack: error.stack,
+      });
+
       client.emit('join-room-error', { error: error.message });
       return { error: error.message };
     }
   }
 
   private getExistingProducers(room: IRoom, peerId: string) {
+    const context = `getExistingProducers`;
     const existingProducers = [];
+
     for (const [otherPeerId, peer] of room.peers) {
       if (otherPeerId !== peerId) {
         for (const producer of peer.producers.values()) {
@@ -140,12 +211,25 @@ export class ChatGateway implements OnGatewayDisconnect {
         }
       }
     }
+
+    this.logger.debug(`[${context}] Found existing producers`, {
+      requestingPeerId: peerId,
+      existingProducersCount: existingProducers.length,
+      producers: existingProducers.map((p) => ({
+        producerId: p.producerId,
+        peerId: p.peerId,
+        kind: p.kind,
+      })),
+    });
+
     return existingProducers;
   }
 
   @SubscribeMessage('leave-room')
   async handleLeaveRoom(@ConnectedSocket() client: Socket) {
+    const context = `handleLeaveRoom`;
     let peerId: string | null = null;
+
     for (const [userId, session] of this.userSessions.entries()) {
       if (session.socketId === client.id) {
         peerId = userId;
@@ -153,47 +237,141 @@ export class ChatGateway implements OnGatewayDisconnect {
       }
     }
 
-    this.logger.log(`Leave room request from ${peerId}`);
+    this.logger.log(`[${context}] Leave room request`, {
+      clientId: client.id,
+      peerId,
+    });
+
     const rooms = Array.from(client.rooms);
+    let roomId: string | null = null;
 
-    if (peerId) {
-      const session = this.userSessions.get(peerId);
-      if (session) {
-        const { roomId, username } = session;
-        this.userSessions.delete(peerId);
-        this.server.emit('user-left', { channelId: roomId, username });
-        this.logger.log(`User ${username} disconnected from room ${roomId}`);
+    try {
+      if (peerId) {
+        const session = this.userSessions.get(peerId);
+        if (session) {
+          roomId = session.roomId;
+          const { username } = session;
+
+          this.userSessions.delete(peerId);
+
+          this.logger.log(`[${context}] User session removed`, {
+            peerId,
+            username,
+            roomId,
+          });
+
+          this.server.emit('user-left', {
+            channelId: roomId,
+            username,
+            userId: peerId,
+          });
+        }
       }
-    }
 
-    for (const roomId of rooms) {
-      if (roomId !== client.id) {
-        const room = this.roomService.getRoom(roomId);
-        if (room) {
-          this.cleanupPeerResources(room, peerId);
-          client.to(roomId).emit('peer-left', { peerId });
-          client.leave(roomId);
-          this.logger.log(`Client ${peerId} left room ${roomId}`);
+      for (const currentRoomId of rooms) {
+        if (currentRoomId !== client.id) {
+          const room = this.roomService.getRoom(currentRoomId);
+          if (room && peerId) {
+            this.logger.debug(`[${context}] Cleaning up peer resources`, {
+              roomId: currentRoomId,
+              peerId,
+            });
 
-          if (room.peers.size === 0) {
-            this.roomService.removeRoom(roomId);
-            this.logger.log(`Room ${roomId} removed`);
+            this.cleanupPeerResources(room, peerId);
+            client.to(currentRoomId).emit('peer-left', { peerId });
+            client.leave(currentRoomId);
+
+            this.logger.log(`[${context}] Peer left room`, {
+              roomId: currentRoomId,
+              peerId,
+              remainingPeers: room.peers.size,
+            });
+
+            if (room.peers.size === 0) {
+              this.roomService.removeRoom(currentRoomId);
+              this.logger.log(`[${context}] Empty room removed`, {
+                roomId: currentRoomId,
+              });
+            }
           }
         }
       }
-    }
 
-    return { participants: Array.from(this.userSessions.values()) };
+      const participants = Array.from(this.userSessions.values());
+
+      this.logger.log(`[${context}] Leave room completed`, {
+        peerId,
+        roomId,
+        totalParticipants: participants.length,
+      });
+
+      return { participants };
+    } catch (error) {
+      this.logger.error(`[${context}] Error during leave room`, {
+        clientId: client.id,
+        peerId,
+        roomId,
+        error: error.message,
+        stack: error.stack,
+      });
+
+      return { error: error.message };
+    }
   }
 
   private cleanupPeerResources(room: IRoom, peerId: string) {
+    const context = `cleanupPeerResources`;
     const peer = room.peers.get(peerId);
+
     if (peer) {
-      this.logger.log(`Cleaning resources for peer ${peerId}`);
-      peer.producers.forEach((producer) => producer.producer.close());
-      peer.consumers.forEach((consumer) => consumer.consumer.close());
-      peer.transports.forEach((transport) => transport.transport.close());
-      room.peers.delete(peerId);
+      this.logger.debug(`[${context}] Starting cleanup for peer`, {
+        peerId,
+        producersCount: peer.producers.size,
+        consumersCount: peer.consumers.size,
+        transportsCount: peer.transports.size,
+      });
+
+      try {
+        peer.producers.forEach((producer, producerId) => {
+          producer.producer.close();
+          this.logger.debug(`[${context}] Producer closed`, {
+            peerId,
+            producerId,
+          });
+        });
+
+        peer.consumers.forEach((consumer, consumerId) => {
+          consumer.consumer.close();
+          this.logger.debug(`[${context}] Consumer closed`, {
+            peerId,
+            consumerId,
+          });
+        });
+
+        peer.transports.forEach((transport, transportId) => {
+          transport.transport.close();
+          this.logger.debug(`[${context}] Transport closed`, {
+            peerId,
+            transportId,
+          });
+        });
+
+        room.peers.delete(peerId);
+
+        this.logger.log(`[${context}] Peer resources cleaned up successfully`, {
+          peerId,
+        });
+      } catch (error) {
+        this.logger.error(`[${context}] Error during resource cleanup`, {
+          peerId,
+          error: error.message,
+          stack: error.stack,
+        });
+      }
+    } else {
+      this.logger.warn(`[${context}] Peer not found for cleanup`, {
+        peerId,
+      });
     }
   }
 
@@ -208,35 +386,62 @@ export class ChatGateway implements OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @CurrentUser('id') userId: string,
   ) {
-    this.logger.log(`Connect transport request: ${JSON.stringify(data)}`);
+    const context = `handleConnectTransport`;
     const { roomId, dtlsParameters, transportId } = data;
+
+    this.logger.log(`[${context}] Connect transport request`, {
+      roomId,
+      userId,
+      transportId,
+      clientId: client.id,
+    });
 
     try {
       const room = this.roomService.getRoom(roomId);
-      const peer = room?.peers.get(userId);
+      if (!room) {
+        this.logger.warn(`[${context}] Room not found`, {
+          roomId,
+          userId,
+        });
+        return { error: 'Room not found' };
+      }
 
+      const peer = room.peers.get(userId);
       if (!peer) {
-        this.logger.warn(`Peer ${userId} not found in room ${roomId}`);
+        this.logger.warn(`[${context}] Peer not found in room`, {
+          roomId,
+          userId,
+        });
         return { error: 'Peer not found' };
       }
 
       const transportData = peer.transports.get(transportId);
       if (!transportData) {
-        this.logger.warn(
-          `Transport ${transportId} not found for peer ${userId}`,
-        );
+        this.logger.warn(`[${context}] Transport not found for peer`, {
+          roomId,
+          userId,
+          transportId,
+        });
         return { error: 'Transport not found' };
       }
 
       await transportData.transport.connect({ dtlsParameters });
-      this.logger.log(`Transport ${transportId} connected successfully`);
+
+      this.logger.log(`[${context}] Transport connected successfully`, {
+        roomId,
+        userId,
+        transportId,
+      });
 
       return { connected: true };
     } catch (error) {
-      this.logger.error(
-        `Transport connect failed: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`[${context}] Transport connect failed`, {
+        roomId,
+        userId,
+        transportId,
+        error: error.message,
+        stack: error.stack,
+      });
       return { error: error.message };
     }
   }
@@ -253,8 +458,17 @@ export class ChatGateway implements OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @CurrentUser() user: User,
   ) {
-    this.logger.log(`Produce request: ${JSON.stringify(data)}`);
+    const context = `handleProduce`;
     const { roomId, kind, transportId, rtpParameters } = data;
+
+    this.logger.log(`[${context}] Produce request`, {
+      roomId,
+      userId: user.id,
+      username: user.name,
+      kind,
+      transportId,
+      clientId: client.id,
+    });
 
     try {
       const producerId = await this.producerConsumerService.createProducer({
@@ -265,7 +479,14 @@ export class ChatGateway implements OnGatewayDisconnect {
         rtpParameters,
       });
 
-      this.logger.log(`Producer created: ${producerId}`);
+      this.logger.log(`[${context}] Producer created successfully`, {
+        roomId,
+        userId: user.id,
+        username: user.name,
+        producerId,
+        kind,
+      });
+
       client.to(roomId).emit('new-producer', {
         producerId,
         peerId: user.id,
@@ -275,7 +496,15 @@ export class ChatGateway implements OnGatewayDisconnect {
 
       return { producerId };
     } catch (error) {
-      this.logger.error(`Produce failed: ${error.message}`, error.stack);
+      this.logger.error(`[${context}] Produce operation failed`, {
+        roomId,
+        userId: user.id,
+        kind,
+        transportId,
+        error: error.message,
+        stack: error.stack,
+      });
+
       client.emit('produce-error', { error: error.message });
       return { error: error.message };
     }
@@ -293,8 +522,16 @@ export class ChatGateway implements OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @CurrentUser('id') userId: string,
   ) {
-    this.logger.log(`Consume request: ${JSON.stringify(data)}`);
+    const context = `handleConsume`;
     const { roomId, producerId, rtpCapabilities, transportId } = data;
+
+    this.logger.log(`[${context}] Consume request`, {
+      roomId,
+      userId,
+      producerId,
+      transportId,
+      clientId: client.id,
+    });
 
     try {
       const consumerData = await this.producerConsumerService.createConsumer({
@@ -305,10 +542,24 @@ export class ChatGateway implements OnGatewayDisconnect {
         rtpCapabilities,
       });
 
-      this.logger.log(`Consumer created for producer ${producerId}`);
+      this.logger.log(`[${context}] Consumer created successfully`, {
+        roomId,
+        userId,
+        producerId,
+        consumerId: consumerData.id,
+      });
+
       return { consumerData };
     } catch (error) {
-      this.logger.error(`Consume failed: ${error.message}`, error.stack);
+      this.logger.error(`[${context}] Consume operation failed`, {
+        roomId,
+        userId,
+        producerId,
+        transportId,
+        error: error.message,
+        stack: error.stack,
+      });
+
       client.emit('consume-error', { error: error.message });
       return { error: error.message };
     }
@@ -319,58 +570,214 @@ export class ChatGateway implements OnGatewayDisconnect {
     @MessageBody() channelId: string,
     @ConnectedSocket() client: Socket,
   ) {
-    this.logger.log(`Get participants for channel ${channelId}`);
-    const participants = Array.from(this.userSessions.values());
+    const context = `handleGetParticipants`;
+
+    this.logger.log(`[${context}] Get participants request`, {
+      channelId,
+      clientId: client.id,
+    });
+
+    const participants = Array.from(this.userSessions.entries())
+      .filter(([_, session]) => session.roomId === channelId)
+      .map(([userId, session]) => ({
+        channelId: session.roomId,
+        username: session.username,
+        avatar: session.avatar,
+        userId,
+      }));
+
+    this.logger.debug(`[${context}] Participants found`, {
+      channelId,
+      participantsCount: participants.length,
+    });
+
     return { status: 'ok', participants };
   }
 
   @SubscribeMessage('producer-pause')
   async handleProducerPause(
-    @MessageBody() data: { roomId: string; producerId: string },
+    @MessageBody() data: ProducerEventDto,
     @ConnectedSocket() client: Socket,
     @CurrentUser('id') userId: string,
   ) {
+    const context = `handleProducerPause`;
     const { roomId, producerId } = data;
-    const peer = this.roomService.getRoom(roomId).peers.get(userId);
-    const pc = peer?.producers.get(producerId);
-    if (pc) {
+
+    this.logger.log(`[${context}] Producer pause request`, {
+      roomId,
+      userId,
+      producerId,
+      clientId: client.id,
+    });
+
+    try {
+      const room = this.roomService.getRoom(roomId);
+      if (!room) {
+        this.logger.warn(`[${context}] Room not found`, { roomId, userId });
+        return { error: 'Room not found' };
+      }
+
+      const peer = room.peers.get(userId);
+      if (!peer) {
+        this.logger.warn(`[${context}] Peer not found`, { roomId, userId });
+        return { error: 'Peer not found' };
+      }
+
+      const pc = peer.producers.get(producerId);
+      if (!pc) {
+        this.logger.warn(`[${context}] Producer not found`, {
+          roomId,
+          userId,
+          producerId,
+        });
+        return { error: 'Producer not found' };
+      }
+
       await pc.producer.pause();
+
+      this.logger.log(`[${context}] Producer paused successfully`, {
+        roomId,
+        userId,
+        producerId,
+      });
+
       this.server.to(roomId).emit('producer-paused', { producerId });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`[${context}] Producer pause failed`, {
+        roomId,
+        userId,
+        producerId,
+        error: error.message,
+        stack: error.stack,
+      });
+      return { error: error.message };
     }
   }
 
   @SubscribeMessage('producer-resume')
   async handleProducerResume(
-    @MessageBody() data: { roomId: string; producerId: string },
+    @MessageBody() data: ProducerEventDto,
     @ConnectedSocket() client: Socket,
     @CurrentUser('id') userId: string,
   ) {
+    const context = `handleProducerResume`;
     const { roomId, producerId } = data;
-    const peer = this.roomService.getRoom(roomId).peers.get(userId);
-    const pc = peer?.producers.get(producerId);
-    if (pc) {
+
+    this.logger.log(`[${context}] Producer resume request`, {
+      roomId,
+      userId,
+      producerId,
+      clientId: client.id,
+    });
+
+    try {
+      const room = this.roomService.getRoom(roomId);
+      if (!room) {
+        this.logger.warn(`[${context}] Room not found`, { roomId, userId });
+        return { error: 'Room not found' };
+      }
+
+      const peer = room.peers.get(userId);
+      if (!peer) {
+        this.logger.warn(`[${context}] Peer not found`, { roomId, userId });
+        return { error: 'Peer not found' };
+      }
+
+      const pc = peer.producers.get(producerId);
+      if (!pc) {
+        this.logger.warn(`[${context}] Producer not found`, {
+          roomId,
+          userId,
+          producerId,
+        });
+        return { error: 'Producer not found' };
+      }
+
       await pc.producer.resume();
+
+      this.logger.log(`[${context}] Producer resumed successfully`, {
+        roomId,
+        userId,
+        producerId,
+      });
+
       this.server.to(roomId).emit('producer-resumed', { producerId });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`[${context}] Producer resume failed`, {
+        roomId,
+        userId,
+        producerId,
+        error: error.message,
+        stack: error.stack,
+      });
+      return { error: error.message };
     }
   }
 
   @SubscribeMessage('producer-close')
   async handleProducerClose(
-    @MessageBody() data: { roomId: string; producerId: string },
+    @MessageBody() data: ProducerEventDto,
     @ConnectedSocket() client: Socket,
     @CurrentUser('id') userId: string,
   ) {
+    const context = `handleProducerClose`;
     const { roomId, producerId } = data;
-    const peer = this.roomService.getRoom(roomId).peers.get(userId);
-    console.log('peer = ', peer);
-    console.log('roomId, producerId - ', roomId, producerId);
-    const pc = peer?.producers.get(producerId);
-    console.log('pc - ', pc);
-    if (pc) {
-      console.log('if work');
+
+    this.logger.log(`[${context}] Producer close request`, {
+      roomId,
+      userId,
+      producerId,
+      clientId: client.id,
+    });
+
+    try {
+      const room = this.roomService.getRoom(roomId);
+      if (!room) {
+        this.logger.warn(`[${context}] Room not found`, { roomId, userId });
+        return { error: 'Room not found' };
+      }
+
+      const peer = room.peers.get(userId);
+      if (!peer) {
+        this.logger.warn(`[${context}] Peer not found`, { roomId, userId });
+        return { error: 'Peer not found' };
+      }
+
+      const pc = peer.producers.get(producerId);
+      if (!pc) {
+        this.logger.warn(`[${context}] Producer not found`, {
+          roomId,
+          userId,
+          producerId,
+        });
+        return { error: 'Producer not found' };
+      }
+
       await pc.producer.close();
       peer.producers.delete(producerId);
+
+      this.logger.log(`[${context}] Producer closed successfully`, {
+        roomId,
+        userId,
+        producerId,
+      });
+
+      this.server.to(roomId).emit('producer-closed', { producerId });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`[${context}] Producer close failed`, {
+        roomId,
+        userId,
+        producerId,
+        error: error.message,
+        stack: error.stack,
+      });
+      return { error: error.message };
     }
-    this.server.to(roomId).emit('producer-closed', { producerId });
   }
 }
